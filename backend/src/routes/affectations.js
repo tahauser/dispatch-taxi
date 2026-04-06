@@ -110,9 +110,9 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
       }
     }
 
-    const raisonMsg = details.length > 0 ? ' | Non affectes: ' + details.join(' / ') : '';
+    const raisonMsg = details.length > 0 ? ' | Non affectés: ' + details.join(' / ') : '';
     const msg = sauvegardes > 0
-      ? `${sauvegardes} nouvelle(s) affectation(s)${ignorees>0?' ('+ignorees+' conservees)':''}${raisonMsg}`
+      ? `${sauvegardes} nouvelle(s) affectation(s)${ignorees>0?' ('+ignorees+' conservées)':''}${raisonMsg}`
       : `Aucune nouvelle affectation${raisonMsg}`;
     res.json({ message: msg, affectations: sauvegardes, non_affectes: nonAffectes });
   } catch (err) {
@@ -133,7 +133,7 @@ router.put('/:id', authMiddleware, requireRole('dispatch','admin'), async (req, 
       [chauffeur_id||null, notes_dispatch||null, req.user.id, req.params.id]
     );
     if (result.rows.length === 0)
-      return res.status(404).json({ message: 'Affectation non trouvee' });
+      return res.status(404).json({ message: 'Affectation non trouvée' });
     res.json(result.rows[0]);
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
@@ -317,7 +317,7 @@ router.delete('/reinitialiser', authMiddleware, requireRole('dispatch','admin'),
     const result = await pool.query(
       'DELETE FROM affectations WHERE date_programme = $1', [date]
     );
-    res.json({ message: `${result.rowCount} affectation(s) supprimee(s)`, supprimees: result.rowCount });
+    res.json({ message: `${result.rowCount} affectation(s) supprimée(s)`, supprimees: result.rowCount });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -331,7 +331,7 @@ router.delete('/:id', authMiddleware, requireRole('dispatch','admin'), async (re
       [req.params.id]
     );
     if (result.rows.length === 0)
-      return res.status(404).json({ message: 'Affectation non trouvee' });
+      return res.status(404).json({ message: 'Affectation non trouvée' });
     res.json({ message: 'Affectation retiree' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });

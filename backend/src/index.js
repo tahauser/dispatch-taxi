@@ -18,7 +18,7 @@ app.get('/api/health', (req, res) => res.json({
   status: 'ok', version: '1.0.0', heure: new Date().toISOString()
 }));
 
-app.use((req, res) => res.status(404).json({ message: `Route non trouvee: ${req.method} ${req.path}` }));
+app.use((req, res) => res.status(404).json({ message: `Route non trouvée: ${req.method} ${req.path}` }));
 app.use((err, req, res, next) => {
   console.error('Erreur:', err.message);
   res.status(500).json({ message: 'Erreur serveur interne' });
