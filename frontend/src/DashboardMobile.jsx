@@ -546,9 +546,24 @@ export default function DashboardMobile({ user, onLogout }) {
                             </div>
                           )}
                           {affecte ? (
-                            <div style={{ marginTop:'6px', fontSize:'12px',
-                              color:BLEU, fontWeight:'600' }}>
-                              👤 {affecte.prenom} {affecte.nom} (N° {affecte.numero_chauffeur})
+                            <div style={{ marginTop:'8px' }}>
+                              <div style={{ fontSize:'12px', color:BLEU, fontWeight:'600', marginBottom:'6px' }}>
+                                👤 {affecte.prenom} {affecte.nom} (N° {affecte.numero_chauffeur})
+                              </div>
+                              <div style={{ display:'flex', gap:'6px' }}>
+                                <button onClick={() => setTrajetAAffecter(t)}
+                                  style={{ padding:'6px 12px', background:'#E3F2FD', color:BLEU,
+                                    border:'none', borderRadius:'8px', cursor:'pointer',
+                                    fontSize:'12px', fontWeight:'600' }}>
+                                  🔄 Réaffecter
+                                </button>
+                                <button onClick={() => retirerAff(affecte)}
+                                  style={{ padding:'6px 12px', background:'#ffebee', color:'#c62828',
+                                    border:'none', borderRadius:'8px', cursor:'pointer',
+                                    fontSize:'12px', fontWeight:'600' }}>
+                                  ✕ Retirer
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <button onClick={() => setTrajetAAffecter(t)}
