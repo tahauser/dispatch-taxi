@@ -30,7 +30,7 @@ function optimiserAffectations(trajets, chauffeurs) {
           c.type_vehicule !== trajet.type_vehicule) return false;
       if (etat[c.id].libre_a > hPrise) return false;
       return c.disponibilites?.some(d =>
-        toMinutes(d.heure_debut) <= hPrise && toMinutes(d.heure_fin) >= hArr
+        toMinutes(d.heure_debut) <= hPrise && toMinutes(d.heure_fin) > hPrise
       );
     });
     if (candidats.length === 0) { nonAffectes.push(trajet.code_trajet); continue; }
