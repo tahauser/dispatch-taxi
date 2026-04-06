@@ -169,7 +169,7 @@ export default function Dashboard({ user, onLogout }) {
           <button onClick={reinitialiserAffectations} disabled={loading || !dejaPropose}
             style={{ padding:'8px 16px', background: dejaPropose ? '#c62828' : '#e0e0e0', color: dejaPropose ? 'white' : '#999', border: dejaPropose ? 'none' : '1px solid #ccc',
               borderRadius:'6px', cursor: dejaPropose ? 'pointer' : 'not-allowed', fontWeight:'500' }}>
-            Reinitialiser
+            Réinitialiser
           </button>
           <button onClick={envoyerProgrammes} disabled={loading || nbAffectes === 0 || dejaEnvoye}
             style={{ padding:'8px 16px', background: (dejaEnvoye || nbAffectes === 0) ? '#e0e0e0' : '#375623',
