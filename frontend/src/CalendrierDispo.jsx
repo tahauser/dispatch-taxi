@@ -195,8 +195,8 @@ export default function CalendrierDispo({ user }) {
       }
     }
     await chargerDispos();
-    if (erreurs > 0) setMessage(`${total} plages sauvegardees, ${erreurs} erreurs`);
-    else setMessage(total > 0 ? `${total} plage(s) sauvegardee(s) avec succes` : 'Disponibilites mises a jour');
+    if (erreurs > 0) setMessage(`${total} plages sauvegardées, ${erreurs} erreurs`);
+    else setMessage(total > 0 ? `${total} plage(s) sauvegardée(s) avec succès` : 'Disponibilités mises à jour');
     setLoading(false);
   }
 
@@ -280,7 +280,7 @@ export default function CalendrierDispo({ user }) {
       <div style={{ display:'flex', gap:'16px', marginBottom:'8px', fontSize:'12px', color:'#555' }}>
         <span>💚 Disponible &nbsp; ⬜ Non disponible &nbsp; 🔲 Passe</span>
         <span style={{ marginLeft:'auto', color:'#888' }}>
-          Cliquez ou glissez pour selectionner des creneaux
+          Cliquez ou glissez pour sélectionner des créneaux
         </span>
       </div>
 
@@ -349,7 +349,7 @@ export default function CalendrierDispo({ user }) {
         </table>
       </div>
       <p style={{ fontSize:'11px', color:'#aaa', marginTop:'6px' }}>
-        Glissez sur plusieurs creneaux pour une selection rapide. Bouton "sem." pour copier un jour sur toute la semaine.
+        Glissez sur plusieurs créneaux pour une sélection rapide. Bouton "sem." pour copier un jour sur toute la semaine.
       </p>
     </div>
   );

@@ -19,7 +19,7 @@ export default function PortailChauffeur({ user, onLogout }) {
           <button onClick={onLogout}
             style={{ background:'transparent', border:'1px solid #ffffff66', color:'white',
               padding:'6px 14px', borderRadius:'6px', cursor:'pointer', fontSize:'13px' }}>
-            Deconnexion
+            Déconnexion
           </button>
         </div>
       </div>

@@ -183,7 +183,7 @@ export default function CalendrierProgramme({ user }) {
                 {[
                   { label:'Date', val: selected.date_trajet?.split('T')[0] },
                   { label:'Prise en charge', val: fmt(selected.heure_prise) },
-                  { label:'Arrivee prevue', val: fmt(selected.heure_arrivee) },
+                  { label:'Arrivée prévue', val: fmt(selected.heure_arrivee) },
                   { label:'Type vehicule', val: selected.type_vehicule },
                   { label:'Adresse', val: selected.adresse_prise },
                   { label:'Notes', val: selected.notes || '—' },
@@ -202,7 +202,7 @@ export default function CalendrierProgramme({ user }) {
       {trajets.length === 0 && !loading && (
         <div style={{ textAlign:'center', padding:'60px', color:'#aaa' }}>
           <div style={{ fontSize:'48px', marginBottom:'12px' }}>📅</div>
-          Aucun trajet prevu cette semaine
+          Aucun trajet prévu cette semaine
         </div>
       )}
 

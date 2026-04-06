@@ -100,7 +100,7 @@ export default function Dashboard({ user, onLogout }) {
   async function envoyerIndividuel(chauffeurId) {
     try {
       await api.post(`/affectations/envoyer/${chauffeurId}?date=${date}`);
-      setMessage('Email envoye avec succes');
+      setMessage('Email envoyé avec succès');
       if (msgTimer.current) clearTimeout(msgTimer.current);
       msgTimer.current = setTimeout(() => setMessage(''), 4000);
       await chargerDonnees();
@@ -146,7 +146,7 @@ export default function Dashboard({ user, onLogout }) {
           <button onClick={onLogout}
             style={{ background:'transparent', border:'1px solid #ffffff66', color:'white',
               padding:'6px 14px', borderRadius:'6px', cursor:'pointer', fontSize:'13px' }}>
-            Deconnexion
+            Déconnexion
           </button>
         </div>
       </div>
@@ -302,7 +302,7 @@ export default function Dashboard({ user, onLogout }) {
               <tbody>
                 {dispos.length === 0 ? (
                   <tr><td colSpan="5" style={{ padding:'40px', textAlign:'center', color:'#999' }}>
-                    Aucune disponibilite pour cette date
+                    Aucune disponibilité pour cette date
                   </td></tr>
                 ) : dispos.map((d,i) => (
                   <tr key={d.id} style={{ background: i%2===0 ? '#fafafa' : 'white',
