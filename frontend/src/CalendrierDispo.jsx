@@ -197,7 +197,7 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
 
   async function sauvegarder() {
     setLoading(true); setMessage('');
-    let total = 0; let erreurs = 0;
+    let total = 0; let erreurs = 0; let premiereErreurMsg = '';
     for (const jour of semaine) {
       const date = dateStr(jour);
       if (estPasse(date)) continue;
@@ -212,12 +212,15 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
         try {
           await api.post('/disponibilites', { date_dispo: date, heure_debut: hDeb, heure_fin: hFin, note_journee: notesJour[date] || null });
           total++;
-        } catch (err) { console.error(err.response?.data?.message); erreurs++; }
+        } catch (err) {
+          erreurs++;
+          if (!premiereErreurMsg) premiereErreurMsg = err.response?.data?.message || 'Erreur serveur';
+        }
       }
     }
     await chargerDispos();
     setDirty(false);
-    if (erreurs > 0) setMessage(`${total} plages sauvegardées, ${erreurs} erreurs`);
+    if (erreurs > 0) setMessage(`${premiereErreurMsg} (${erreurs} créneau(x) non sauvegardé(s))`);
     else setMessage(total > 0 ? `${total} plage(s) sauvegardée(s) avec succès` : 'Disponibilités mises à jour');
     setLoading(false);
   }

@@ -113,18 +113,21 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
     }
     // Recréer depuis la sélection
     const plages = selectionEnPlages();
-    let total = 0; let erreurs = 0;
+    let total = 0; let erreurs = 0; let premierreErreurMsg = '';
     for (const plage of plages) {
       const hDeb = String(plage.debut).padStart(2,'0') + ':00';
       const hFin = String(plage.fin).padStart(2,'0') + ':00';
       try {
         await api.post('/disponibilites', { date_dispo: jourStr, heure_debut: hDeb, heure_fin: hFin, note_journee: noteJour || null });
         total++;
-      } catch (err) { erreurs++; }
+      } catch (err) {
+        erreurs++;
+        if (!premierreErreurMsg) premierreErreurMsg = err.response?.data?.message || 'Erreur serveur';
+      }
     }
     await charger();
     setDirty(false);
-    if (erreurs > 0) setMessage(`${total} plage(s) sauvegardée(s), ${erreurs} erreur(s)`);
+    if (erreurs > 0) setMessage(`${premierreErreurMsg} (${erreurs} créneau(x) non sauvegardé(s))`);
     else setMessage(total > 0 ? `${total} plage(s) sauvegardée(s) avec succès` : 'Disponibilités mises à jour');
     setLoading(false);
   }
