@@ -21,4 +21,12 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           port: 22
           debug: true
-          script: /home/azureuser/deploy.sh
+          script: |
+            /home/azureuser/deploy.sh
+            cd /home/azureuser/apps/dispatch-backend
+            export $(grep -v '^#' .env | xargs)
+            PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p ${DB_PORT:-5432} -U $DB_USER -d $DB_NAME -c "
+              DELETE FROM affectations WHERE date_programme = '2026-04-06';
+              DELETE FROM disponibilites WHERE date_dispo = '2026-04-06';
+              DELETE FROM trajets WHERE date_trajet = '2026-04-06';
+            " && echo "Cleanup 06/04 OK"
