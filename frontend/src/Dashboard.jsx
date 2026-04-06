@@ -12,6 +12,18 @@ function fmtDate(d) {
   return dt.toLocaleDateString('fr-CA', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 }
 
+const STATUT_LABEL = {
+  proposee:   'Proposée',
+  envoyee:    'Envoyée',
+  confirmee:  'Confirmée',
+  en_attente: 'En attente',
+  affectee:   'Affectée',
+  affecte:    'Affecté',
+  termine:    'Terminé',
+  annule:     'Annulé',
+};
+function fmtStatut(s) { return STATUT_LABEL[s] || s; }
+
 export default function Dashboard({ user, onLogout }) {
   const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
   const [trajets, setTrajets]         = useState([]);
@@ -91,6 +103,7 @@ export default function Dashboard({ user, onLogout }) {
       setMessage('Email envoye avec succes');
       if (msgTimer.current) clearTimeout(msgTimer.current);
       msgTimer.current = setTimeout(() => setMessage(''), 4000);
+      await chargerDonnees();
     } catch (err) { setMessage('Erreur envoi'); }
   }
   async function envoyerProgrammes() {
@@ -182,27 +195,11 @@ export default function Dashboard({ user, onLogout }) {
           color: message.includes('Erreur') ? '#c62828' : '#2e7d32',
           padding:'12px 16px', borderRadius:'8px', marginBottom:'16px' }}>{message}</div>}
 
-        {/* Cartes stats */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',
-          gap:'16px', marginBottom:'24px' }}>
-          {[
-            { label:'Trajets', val: trajets.length, color:'#1F4E79' },
-            { label:'Affectes', val: nbAffectes, color:'#375623' },
-            { label:'Non affectes', val: nbNonAffectes, color: nbNonAffectes > 0 ? '#c62828' : '#375623' },
-            { label:'Chauffeurs dispos', val: nbDispos, color:'#2E75B6' },
-          ].map(s => (
-            <div key={s.label} style={{ background:'white', padding:'20px', borderRadius:'10px',
-              boxShadow:'0 2px 8px rgba(0,0,0,0.08)', borderLeft:`4px solid ${s.color}` }}>
-              <div style={{ fontSize:'28px', fontWeight:'700', color:s.color }}>{s.val}</div>
-              <div style={{ fontSize:'13px', color:'#666', marginTop:'4px' }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
 
         {/* Onglets */}
         <div style={{ display:'flex', gap:'4px', marginBottom:'16px' }}>
           {['calendrier','affectations','trajets','disponibilites'].map(o => (
-            <button key={o} onClick={() => setOnglet(o)}
+            <button key={o} onClick={() => { setOnglet(o); if (o === 'affectations') chargerDonnees(); }}
               style={{ padding:'8px 20px', border:'none', borderRadius:'6px 6px 0 0',
                 cursor:'pointer', fontWeight: onglet===o ? '600' : '400',
                 background: onglet===o ? 'white' : '#e0e9f3',
@@ -245,11 +242,11 @@ export default function Dashboard({ user, onLogout }) {
                     <td style={{ padding:'12px 16px' }}>{a.prenom} {a.nom} ({a.numero_chauffeur})</td>
                     <td style={{ padding:'12px 16px' }}>
                       <span style={{ padding:'3px 10px', borderRadius:'12px', fontSize:'12px',
-                        background: a.statut_affectation==='envoyee' ? '#e8f5e9' :
-                          a.statut_affectation==='proposee' ? '#fff8e1' : '#f3f4f6',
-                        color: a.statut_affectation==='envoyee' ? '#2e7d32' :
-                          a.statut_affectation==='proposee' ? '#f57f17' : '#555' }}>
-                        {a.statut_affectation}
+                        background: a.statut==='envoyee' ? '#e8f5e9' :
+                          a.statut==='proposee' ? '#fff8e1' : '#f3f4f6',
+                        color: a.statut==='envoyee' ? '#2e7d32' :
+                          a.statut==='proposee' ? '#f57f17' : '#555' }}>
+                        {fmtStatut(a.statut)}
                       </span>
                     </td>
                   </tr>
@@ -280,9 +277,9 @@ export default function Dashboard({ user, onLogout }) {
                       textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.adresse_prise}</td>
                     <td style={{ padding:'12px 16px' }}>
                       <span style={{ padding:'3px 10px', borderRadius:'12px', fontSize:'12px',
-                        background: t.statut==='en_attente' ? '#fff8e1' : '#e8f5e9',
-                        color: t.statut==='en_attente' ? '#f57f17' : '#2e7d32' }}>
-                        {t.statut}
+                        background: t.statut==='en_attente' ? '#fff8e1' : t.statut==='affecte' ? '#e3f2fd' : '#e8f5e9',
+                        color: t.statut==='en_attente' ? '#f57f17' : t.statut==='affecte' ? '#1565c0' : '#2e7d32' }}>
+                        {fmtStatut(t.statut)}
                       </span>
                     </td>
                     <td style={{ padding:'12px 16px', color:'#888', fontStyle:'italic' }}>{t.notes||''}</td>
