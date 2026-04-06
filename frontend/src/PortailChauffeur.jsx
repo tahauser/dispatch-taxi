@@ -9,7 +9,7 @@ export default function PortailChauffeur({ user, onLogout }) {
 
   return (
     <div style={{ minHeight:'100vh', background:'#f0f4f8', fontFamily:'Arial,sans-serif' }}>
-      <div style={{ background:BLEU, padding:'16px 24px', display:'flex',
+      <div style={{ background:BLEU, paddingTop:'calc(16px + env(safe-area-inset-top))', paddingBottom:'16px', paddingLeft:'24px', paddingRight:'24px', display:'flex',
         justifyContent:'space-between', alignItems:'center' }}>
         <h1 style={{ color:'white', margin:0, fontSize:'20px' }}>Dispatch Taxi</h1>
         <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
