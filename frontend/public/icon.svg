@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1F4E79"/>
+  <rect x="96" y="230" width="320" height="140" rx="20" fill="#F5C518"/>
+  <rect x="140" y="185" width="220" height="80" rx="16" fill="#F5C518"/>
+  <rect x="160" y="200" width="70" height="55" rx="8" fill="#AEE0F5"/>
+  <rect x="270" y="200" width="70" height="55" rx="8" fill="#AEE0F5"/>
+  <circle cx="170" cy="375" r="38" fill="#1F4E79"/>
+  <circle cx="170" cy="375" r="24" fill="#D0D0D0"/>
+  <circle cx="340" cy="375" r="38" fill="#1F4E79"/>
+  <circle cx="340" cy="375" r="24" fill="#D0D0D0"/>
+  <rect x="88" y="290" width="30" height="50" rx="6" fill="#F5C518"/>
+  <rect x="394" y="290" width="30" height="50" rx="6" fill="#F5C518"/>
+  <rect x="220" y="155" width="72" height="32" rx="8" fill="#F5C518"/>
+  <text x="256" y="178" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="bold" fill="#1F4E79">TAXI</text>
+</svg>
