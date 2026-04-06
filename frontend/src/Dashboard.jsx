@@ -204,7 +204,7 @@ export default function Dashboard({ user, onLogout }) {
                 cursor:'pointer', fontWeight: onglet===o ? '600' : '400',
                 background: onglet===o ? 'white' : '#e0e9f3',
                 color: onglet===o ? BLEU : '#555', fontSize:'14px' }}>
-              {o==='calendrier'?'📅 Calendrier':o==='affectations'?'Affectations':o==='trajets'?'Trajets':'Disponibilites'}
+              {o==='calendrier'?'📅 Calendrier':o==='affectations'?'Affectations':o==='trajets'?'Trajets':'Disponibilités'}
             </button>
           ))}
         </div>
