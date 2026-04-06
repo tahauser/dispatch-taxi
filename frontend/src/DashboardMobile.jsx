@@ -410,16 +410,59 @@ export default function DashboardMobile({ user, onLogout }) {
 
         {/* ── Onglet Affectations ── */}
         {onglet === 'affectations' && (
-          affectations.length === 0 ? (
+          trajets.length === 0 ? (
             <div style={{ textAlign:'center', padding:'50px 20px', color:'#bbb' }}>
               <div style={{ fontSize:'48px', marginBottom:'12px' }}>📋</div>
-              <div style={{ fontSize:'15px', fontWeight:'500' }}>Aucune affectation</div>
-              <div style={{ fontSize:'13px', marginTop:'4px' }}>
-                Utilisez "Proposer" ou affectez manuellement depuis l'onglet Trajets
-              </div>
+              <div style={{ fontSize:'15px', fontWeight:'500' }}>Aucun trajet ce jour</div>
             </div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+              {/* Trajets non affectés en premier */}
+              {trajets.filter(t => !affectations.find(a => a.trajet_id === t.id)).map(t => (
+                <div key={t.id} style={{ background:'white', borderRadius:'12px',
+                  boxShadow:'0 1px 6px rgba(0,0,0,0.08)', overflow:'hidden',
+                  border:'2px solid #FFB74D' }}>
+                  <div style={{ background:'#FF9800', padding:'8px 14px',
+                    display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ color:'white', fontWeight:'700', fontSize:'15px' }}>{t.code_trajet}</span>
+                    <span style={{ color:'rgba(255,255,255,0.9)', fontSize:'13px' }}>
+                      {fmt(t.heure_prise)} → {fmt(t.heure_arrivee)}
+                    </span>
+                  </div>
+                  <div style={{ padding:'10px 14px', display:'flex',
+                    justifyContent:'space-between', alignItems:'center' }}>
+                    <div>
+                      <div style={{ fontSize:'12px', color:'#555', fontWeight:'500' }}>{t.type_vehicule}</div>
+                      {t.adresse_prise && (
+                        <div style={{ fontSize:'11px', color:'#666', marginTop:'4px',
+                          display:'flex', gap:'4px' }}>
+                          <span>📍</span>
+                          <span style={{ lineHeight:'1.3' }}>{t.adresse_prise}</span>
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => setTrajetAAffecter(t)}
+                      style={{ padding:'8px 14px', background:BLEU, color:'white',
+                        border:'none', borderRadius:'8px', cursor:'pointer',
+                        fontSize:'13px', fontWeight:'600', flexShrink:0, marginLeft:'10px' }}>
+                      👤 Affecter
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Séparateur si les deux existent */}
+              {affectations.length > 0 && nbNonAffectes > 0 && (
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', margin:'4px 0' }}>
+                  <div style={{ flex:1, height:'1px', background:'#e0e0e0' }} />
+                  <span style={{ fontSize:'11px', color:'#aaa', fontWeight:'600' }}>
+                    AFFECTÉS ({affectations.length})
+                  </span>
+                  <div style={{ flex:1, height:'1px', background:'#e0e0e0' }} />
+                </div>
+              )}
+
+              {/* Trajets affectés */}
               {affectations.map(a => (
                 <div key={a.id} style={{ background:'white', borderRadius:'12px',
                   boxShadow:'0 1px 6px rgba(0,0,0,0.08)', overflow:'hidden' }}>
@@ -431,8 +474,7 @@ export default function DashboardMobile({ user, onLogout }) {
                     </span>
                   </div>
                   <div style={{ padding:'10px 14px' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between',
-                      alignItems:'flex-start' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                       <div>
                         <div style={{ fontSize:'14px', fontWeight:'600', color:'#333' }}>
                           {a.prenom} {a.nom}
