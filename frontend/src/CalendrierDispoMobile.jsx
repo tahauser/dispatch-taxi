@@ -4,12 +4,21 @@ import api from './api';
 const BLEU = '#1F4E79';
 const HEURES = Array.from({length: 19}, (_, i) => i + 6); // 06h → 00h
 
+const DEADLINE_HEURE = 18; // doit correspondre à DEADLINE_HEURE sur le serveur
+
 function dateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
 function fmtDateLong(d) {
   return d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+}
+function getDemainStr() {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  return dateStr(d);
+}
+function deadlinePassee() {
+  return new Date().getHours() >= DEADLINE_HEURE;
 }
 
 export default function CalendrierDispoMobile({ user, onDirtyChange }) {
@@ -39,6 +48,8 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
   const aujourd   = dateStr(new Date());
   const jourStr   = dateStr(jour);
   const estPasse  = jourStr <= aujourd;
+  // Bloqué = lendemain ET heure >= deadline (pas modifiable mais pas "passé")
+  const estBloque = jourStr === getDemainStr() && deadlinePassee();
   const estAujourdhui = jourStr === aujourd;
 
   useEffect(() => { charger(); }, [jourStr]);
@@ -64,8 +75,10 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
     setLoading(false);
   }
 
+  const lectureSeule = estPasse || estBloque;
+
   function toggle(h) {
-    if (estPasse) return;
+    if (lectureSeule) return;
     setSelection(prev => {
       const s = new Set(prev);
       s.has(h) ? s.delete(h) : s.add(h);
@@ -76,14 +89,14 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
   }
 
   function toutSelectionner() {
-    if (estPasse) return;
+    if (lectureSeule) return;
     setSelection(new Set(HEURES));
     setDirty(true);
     setMessage('');
   }
 
   function toutEffacer() {
-    if (estPasse) return;
+    if (lectureSeule) return;
     if (!window.confirm('Effacer toutes les disponibilités de ce jour ?')) return;
     setSelection(new Set());
     setDirty(true);
@@ -105,7 +118,7 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
   }
 
   async function sauvegarder() {
-    if (estPasse) return;
+    if (lectureSeule) return;
     setLoading(true); setMessage('');
     // Supprimer les dispos existantes du jour
     for (const d of dispos) {
@@ -157,6 +170,12 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
           {estPasse && !estAujourdhui && (
             <span style={{ fontSize:'11px', color:'#aaa' }}>Passé — lecture seule</span>
           )}
+          {estBloque && (
+            <span style={{ fontSize:'11px', background:'#fff3e0', color:'#e65100',
+              padding:'2px 8px', borderRadius:'10px', fontWeight:'600' }}>
+              🔒 Saisie fermée après {DEADLINE_HEURE}h
+            </span>
+          )}
         </div>
 
         <button onClick={() => naviguerJour(d => addDays(d, 1))}
@@ -176,7 +195,7 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
       )}
 
       {/* Actions rapides */}
-      {!estPasse && (
+      {!lectureSeule && (
         <div style={{ display:'flex', gap:'8px', marginBottom:'16px' }}>
           <button onClick={toutSelectionner}
             style={{ flex:1, padding:'8px', background:'#e8f5e9', border:'1px solid #a5d6a7',
@@ -200,14 +219,14 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
             const sel = selection.has(h);
             return (
               <button key={h} onClick={() => toggle(h)}
-                disabled={estPasse}
+                disabled={lectureSeule}
                 style={{
                   padding:'14px 10px',
-                  background: sel ? BLEU : (estPasse ? '#f5f5f5' : 'white'),
-                  color: sel ? 'white' : (estPasse ? '#ccc' : '#444'),
+                  background: sel ? BLEU : (lectureSeule ? '#f5f5f5' : 'white'),
+                  color: sel ? 'white' : (lectureSeule ? '#ccc' : '#444'),
                   border: sel ? `2px solid ${BLEU}` : '2px solid #e0e0e0',
                   borderRadius:'10px',
-                  cursor: estPasse ? 'not-allowed' : 'pointer',
+                  cursor: lectureSeule ? 'not-allowed' : 'pointer',
                   fontSize:'15px',
                   fontWeight: sel ? '700' : '400',
                   transition:'all 0.1s',
@@ -229,15 +248,15 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
         </label>
         <textarea
           value={noteJour}
-          onChange={e => { setNoteJour(e.target.value); if (!estPasse) setDirty(true); }}
-          disabled={estPasse}
-          placeholder={estPasse ? '—' : 'Ex: disponible seulement le matin, pas de longue distance...'}
+          onChange={e => { setNoteJour(e.target.value); if (!lectureSeule) setDirty(true); }}
+          disabled={lectureSeule}
+          placeholder={lectureSeule ? '—' : 'Ex: disponible seulement le matin, pas de longue distance...'}
           rows={3}
           style={{
             width:'100%', padding:'10px 12px', border:'1px solid #ddd',
             borderRadius:'10px', fontSize:'13px', resize:'none',
-            background: estPasse ? '#f5f5f5' : 'white',
-            color: estPasse ? '#aaa' : '#333',
+            background: lectureSeule ? '#f5f5f5' : 'white',
+            color: lectureSeule ? '#aaa' : '#333',
             boxSizing:'border-box', fontFamily:'inherit',
             outline:'none',
           }}
@@ -245,7 +264,7 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
       </div>
 
       {/* Bouton sauvegarder */}
-      {!estPasse && (
+      {!lectureSeule && (
         <button onClick={sauvegarder} disabled={loading}
           style={{ width:'100%', padding:'14px', background: loading ? '#ccc' : '#375623',
             color:'white', border:'none', borderRadius:'10px', cursor: loading ? 'not-allowed' : 'pointer',

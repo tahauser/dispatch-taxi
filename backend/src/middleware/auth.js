@@ -21,14 +21,27 @@ function requireRole(...roles) {
 }
 
 function checkDeadline(req, res, next) {
-  const now      = new Date();
-  const heure    = parseInt(process.env.DEADLINE_HEURE  || '18');
-  const minute   = parseInt(process.env.DEADLINE_MINUTE || '0');
+  const now    = new Date();
+  const heure  = parseInt(process.env.DEADLINE_HEURE  || '18');
+  const minute = parseInt(process.env.DEADLINE_MINUTE || '0');
   const deadline = new Date();
   deadline.setHours(heure, minute, 0, 0);
-  if (now >= deadline)
-    return res.status(403).json({ message: `Saisie fermee apres ${heure}h${String(minute).padStart(2,'0')}` });
-  next();
+
+  // Avant la deadline → toujours autorisé
+  if (now < deadline) { next(); return; }
+
+  // Après la deadline : bloquer seulement si date_dispo === demain
+  const date_dispo = req.body?.date_dispo;
+  if (date_dispo) {
+    const demain = new Date();
+    demain.setDate(demain.getDate() + 1);
+    const strDemain = `${demain.getFullYear()}-${String(demain.getMonth()+1).padStart(2,'0')}-${String(demain.getDate()).padStart(2,'0')}`;
+    if (date_dispo !== strDemain) { next(); return; } // Après-demain et plus → OK
+  }
+
+  return res.status(403).json({
+    message: `Saisie fermée après ${heure}h${String(minute).padStart(2,'0')} pour le lendemain`
+  });
 }
 
 module.exports = { authMiddleware, requireRole, checkDeadline };

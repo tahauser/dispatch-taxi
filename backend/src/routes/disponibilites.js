@@ -50,7 +50,7 @@ router.post('/', authMiddleware, requireRole('chauffeur'), checkDeadline, async 
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
 
-router.delete('/:id', authMiddleware, requireRole('chauffeur'), checkDeadline, async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole('chauffeur'), async (req, res) => {
   try {
     const result = await pool.query(
       'DELETE FROM disponibilites WHERE id=$1 AND chauffeur_id=$2 RETURNING id',

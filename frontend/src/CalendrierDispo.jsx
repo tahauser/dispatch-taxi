@@ -3,6 +3,19 @@ import api from './api';
 
 const BLEU = '#1F4E79';
 const HEURES = Array.from({length: 19}, (_, i) => i + 6); // 06h -> 00h
+const DEADLINE_HEURE = 18;
+
+function getDemainStr() {
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function deadlinePassee() { return new Date().getHours() >= DEADLINE_HEURE; }
+function estBloqueDate(date, aujourd) {
+  // Passé = bloqué, demain après 18h = bloqué
+  if (date <= aujourd) return true;
+  if (date === getDemainStr() && deadlinePassee()) return true;
+  return false;
+}
 
 function getSemaine(dateRef) {
   const d = new Date(dateRef);
@@ -85,7 +98,7 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
     setLoading(false);
   }
 
-  function estPasse(date) { return date <= aujourd; }
+  function estPasse(date) { return estBloqueDate(date, aujourd); }
   function estSelectionne(date, heure) { return selection[date]?.has(heure) || false; }
 
   // --- Glisser-deposer ---
@@ -326,6 +339,11 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
                     color: estAuj ? BLEU : '#333', fontWeight: estAuj ? '700' : '500',
                     textAlign:'center', minWidth:'85px' }}>
                     <div>{fmtJour(jour)}</div>
+                    {d === getDemainStr() && deadlinePassee() && (
+                      <div style={{ fontSize:'10px', color:'#e65100', fontWeight:'600', marginTop:'2px' }}>
+                        🔒 Saisie fermée
+                      </div>
+                    )}
                     {hasDispo && !estPasse(d) && (
                       <div style={{ display:'flex', gap:'2px', justifyContent:'center', marginTop:'3px' }}>
                         <button onClick={() => copierSurSemaine(d)}
