@@ -1,4 +1,6 @@
 import CalendrierDispatch from './CalendrierDispatch';
+import DashboardMobile from './DashboardMobile';
+import useIsMobile from './hooks/useIsMobile';
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
 
@@ -25,6 +27,8 @@ const STATUT_LABEL = {
 function fmtStatut(s) { return STATUT_LABEL[s] || s; }
 
 export default function Dashboard({ user, onLogout }) {
+  const isMobile = useIsMobile();
+  if (isMobile) return <DashboardMobile user={user} onLogout={onLogout} />;
   const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
   const [trajets, setTrajets]         = useState([]);
   const [affectations, setAffectations] = useState([]);
