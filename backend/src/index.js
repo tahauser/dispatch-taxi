@@ -2,6 +2,12 @@ const express = require('express');
 const cors    = require('cors');
 require('dotenv').config();
 
+// Migration idempotente
+const pool = require('./models/db');
+pool.query(`ALTER TABLE disponibilites ADD COLUMN IF NOT EXISTS note_journee TEXT`)
+  .then(() => console.log('Migration: note_journee OK'))
+  .catch(err => console.error('Migration note_journee:', err.message));
+
 const app = express();
 app.use(cors());
 app.use(express.json());

@@ -298,14 +298,14 @@ export default function Dashboard({ user, onLogout }) {
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
                 <tr style={{ background:BLEU, color:'white' }}>
-                  {['No','Chauffeur','Type','Debut','Fin'].map(h => (
+                  {['No','Chauffeur','Type','Debut','Fin','Note journée'].map(h => (
                     <th key={h} style={{ padding:'12px 16px', textAlign:'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {dispos.length === 0 ? (
-                  <tr><td colSpan="5" style={{ padding:'40px', textAlign:'center', color:'#999' }}>
+                  <tr><td colSpan="6" style={{ padding:'40px', textAlign:'center', color:'#999' }}>
                     Aucune disponibilité pour cette date
                   </td></tr>
                 ) : dispos.map((d,i) => (
@@ -316,6 +316,7 @@ export default function Dashboard({ user, onLogout }) {
                     <td style={{ padding:'12px 16px' }}>{d.type_vehicule}</td>
                     <td style={{ padding:'12px 16px' }}>{fmt(d.heure_debut)}</td>
                     <td style={{ padding:'12px 16px' }}>{fmt(d.heure_fin)}</td>
+                    <td style={{ padding:'12px 16px', color:'#666', fontStyle:'italic' }}>{d.note_journee || '—'}</td>
                   </tr>
                 ))}
               </tbody>

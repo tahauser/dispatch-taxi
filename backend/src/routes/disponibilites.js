@@ -27,7 +27,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 router.post('/', authMiddleware, requireRole('chauffeur'), checkDeadline, async (req, res) => {
-  const { date_dispo, heure_debut, heure_fin } = req.body;
+  const { date_dispo, heure_debut, heure_fin, note_journee } = req.body;
   if (!date_dispo || !heure_debut || !heure_fin)
     return res.status(400).json({ message: 'date_dispo, heure_debut et heure_fin requis' });
   const demain = new Date();
@@ -39,12 +39,12 @@ router.post('/', authMiddleware, requireRole('chauffeur'), checkDeadline, async 
     return res.status(400).json({ message: 'heure_fin doit etre apres heure_debut' });
   try {
     const result = await pool.query(
-      `INSERT INTO disponibilites (chauffeur_id, date_dispo, heure_debut, heure_fin)
-       VALUES ($1,$2,$3,$4)
+      `INSERT INTO disponibilites (chauffeur_id, date_dispo, heure_debut, heure_fin, note_journee)
+       VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (chauffeur_id, date_dispo, heure_debut) DO UPDATE SET
-         heure_fin=EXCLUDED.heure_fin, modifie_le=NOW()
+         heure_fin=EXCLUDED.heure_fin, note_journee=EXCLUDED.note_journee, modifie_le=NOW()
        RETURNING *`,
-      [req.user.id, date_dispo, heure_debut, heure_fin]
+      [req.user.id, date_dispo, heure_debut, heure_fin, note_journee || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }

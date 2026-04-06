@@ -19,6 +19,7 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
   const [message, setMessage]   = useState('');
   const [loading, setLoading]   = useState(false);
   const [dirty, setDirty]       = useState(false);
+  const [noteJour, setNoteJour] = useState('');
 
   useEffect(() => {
     const handler = e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
@@ -32,6 +33,7 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
     if (dirty && !window.confirm('Vous avez des modifications non sauvegardées. Quitter ce jour sans sauvegarder ?')) return;
     setJour(fn);
     setDirty(false);
+    setNoteJour('');
   }
 
   const aujourd   = dateStr(new Date());
@@ -55,6 +57,8 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
         for (let h = hDeb; h < hFin; h++) sel.add(h);
       });
       setSelection(sel);
+      // Récupérer la note du premier créneau du jour (même note pour tous)
+      setNoteJour(data[0]?.note_journee || '');
       setDirty(false);
     } catch (err) { console.error(err); }
     setLoading(false);
@@ -114,7 +118,7 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
       const hDeb = String(plage.debut).padStart(2,'0') + ':00';
       const hFin = String(plage.fin).padStart(2,'0') + ':00';
       try {
-        await api.post('/disponibilites', { date_dispo: jourStr, heure_debut: hDeb, heure_fin: hFin });
+        await api.post('/disponibilites', { date_dispo: jourStr, heure_debut: hDeb, heure_fin: hFin, note_journee: noteJour || null });
         total++;
       } catch (err) { erreurs++; }
     }
@@ -213,6 +217,29 @@ export default function CalendrierDispoMobile({ user, onDirtyChange }) {
           })}
         </div>
       )}
+
+      {/* Note de la journée */}
+      <div style={{ marginBottom:'16px' }}>
+        <label style={{ fontSize:'13px', fontWeight:'600', color:'#555',
+          display:'block', marginBottom:'6px' }}>
+          📝 Note pour cette journée <span style={{ fontWeight:'400', color:'#aaa' }}>(optionnel)</span>
+        </label>
+        <textarea
+          value={noteJour}
+          onChange={e => { setNoteJour(e.target.value); if (!estPasse) setDirty(true); }}
+          disabled={estPasse}
+          placeholder={estPasse ? '—' : 'Ex: disponible seulement le matin, pas de longue distance...'}
+          rows={3}
+          style={{
+            width:'100%', padding:'10px 12px', border:'1px solid #ddd',
+            borderRadius:'10px', fontSize:'13px', resize:'none',
+            background: estPasse ? '#f5f5f5' : 'white',
+            color: estPasse ? '#aaa' : '#333',
+            boxSizing:'border-box', fontFamily:'inherit',
+            outline:'none',
+          }}
+        />
+      </div>
 
       {/* Bouton sauvegarder */}
       {!estPasse && (

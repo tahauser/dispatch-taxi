@@ -28,6 +28,7 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
   const [message, setMessage]     = useState('');
   const [loading, setLoading]     = useState(false);
   const [dirty, setDirty]         = useState(false);
+  const [notesJour, setNotesJour] = useState({}); // { 'YYYY-MM-DD': 'note...' }
 
   // Prévenir la fermeture du navigateur si modifications non sauvegardées
   useEffect(() => {
@@ -72,6 +73,13 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
         for (let h = hDeb; h < hFin; h++) sel[date].add(h);
       });
       setSelection(sel);
+      // Charger les notes par jour (première dispo du jour)
+      const notes = {};
+      toutes.forEach(d => {
+        const date = dateStr(new Date(d.date_dispo));
+        if (!notes[date] && d.note_journee) notes[date] = d.note_journee;
+      });
+      setNotesJour(notes);
       setDirty(false);
     } catch (err) { console.error(err); }
     setLoading(false);
@@ -202,7 +210,7 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
         const hDeb = String(plage.debut).padStart(2,'0') + ':00';
         const hFin = String(plage.fin).padStart(2,'0') + ':00';
         try {
-          await api.post('/disponibilites', { date_dispo: date, heure_debut: hDeb, heure_fin: hFin });
+          await api.post('/disponibilites', { date_dispo: date, heure_debut: hDeb, heure_fin: hFin, note_journee: notesJour[date] || null });
           total++;
         } catch (err) { console.error(err.response?.data?.message); erreurs++; }
       }
@@ -365,6 +373,46 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
       <p style={{ fontSize:'11px', color:'#aaa', marginTop:'6px' }}>
         Glissez sur plusieurs créneaux pour une sélection rapide. Bouton "sem." pour copier un jour sur toute la semaine.
       </p>
+
+      {/* Notes par jour */}
+      <div style={{ marginTop:'16px' }}>
+        <div style={{ fontSize:'13px', fontWeight:'600', color:'#555', marginBottom:'8px' }}>
+          📝 Notes par journée <span style={{ fontWeight:'400', color:'#aaa' }}>(optionnel)</span>
+        </div>
+        <div style={{ display:'flex', gap:'6px', overflowX:'auto' }}>
+          {semaine.map(jour => {
+            const date = dateStr(jour);
+            const passe = estPasse(date);
+            return (
+              <div key={date} style={{ minWidth:'120px', flex:1 }}>
+                <div style={{ fontSize:'11px', color: date === aujourd ? BLEU : '#888',
+                  fontWeight: date === aujourd ? '700' : '400',
+                  marginBottom:'4px', whiteSpace:'nowrap' }}>
+                  {fmtJour(jour)}
+                </div>
+                <textarea
+                  value={notesJour[date] || ''}
+                  onChange={e => {
+                    setNotesJour(p => ({ ...p, [date]: e.target.value }));
+                    if (!passe) setDirty(true);
+                  }}
+                  disabled={passe}
+                  placeholder={passe ? '—' : 'Note…'}
+                  rows={3}
+                  style={{
+                    width:'100%', padding:'6px 8px',
+                    border:'1px solid #ddd', borderRadius:'6px',
+                    fontSize:'12px', resize:'none',
+                    background: passe ? '#f5f5f5' : 'white',
+                    color: passe ? '#aaa' : '#333',
+                    boxSizing:'border-box', fontFamily:'inherit',
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

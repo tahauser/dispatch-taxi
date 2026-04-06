@@ -607,6 +607,7 @@ export default function DashboardMobile({ user, onLogout }) {
                 dispos.reduce((acc, d) => {
                   if (!acc[d.chauffeur_id]) acc[d.chauffeur_id] = { ...d, plages: [] };
                   acc[d.chauffeur_id].plages.push({ debut: d.heure_debut, fin: d.heure_fin });
+                  if (d.note_journee) acc[d.chauffeur_id].note_journee = d.note_journee;
                   return acc;
                 }, {})
               ).map(ch => (
@@ -636,6 +637,13 @@ export default function DashboardMobile({ user, onLogout }) {
                       </span>
                     ))}
                   </div>
+                  {ch.note_journee && (
+                    <div style={{ marginTop:'8px', fontSize:'12px', color:'#555',
+                      fontStyle:'italic', background:'#fffde7', borderRadius:'6px',
+                      padding:'6px 10px', borderLeft:'3px solid #FDD835' }}>
+                      📝 {ch.note_journee}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
