@@ -12,12 +12,27 @@ function fmtDateLong(d) {
   return d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
 }
 
-export default function CalendrierDispoMobile({ user }) {
+export default function CalendrierDispoMobile({ user, onDirtyChange }) {
   const [jour, setJour]         = useState(new Date());
   const [dispos, setDispos]     = useState([]);
   const [selection, setSelection] = useState(new Set());
   const [message, setMessage]   = useState('');
   const [loading, setLoading]   = useState(false);
+  const [dirty, setDirty]       = useState(false);
+
+  useEffect(() => {
+    const handler = e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty]);
+
+  function naviguerJour(fn) {
+    if (dirty && !window.confirm('Vous avez des modifications non sauvegardées. Quitter ce jour sans sauvegarder ?')) return;
+    setJour(fn);
+    setDirty(false);
+  }
 
   const aujourd   = dateStr(new Date());
   const jourStr   = dateStr(jour);
@@ -40,6 +55,7 @@ export default function CalendrierDispoMobile({ user }) {
         for (let h = hDeb; h < hFin; h++) sel.add(h);
       });
       setSelection(sel);
+      setDirty(false);
     } catch (err) { console.error(err); }
     setLoading(false);
   }
@@ -51,12 +67,14 @@ export default function CalendrierDispoMobile({ user }) {
       s.has(h) ? s.delete(h) : s.add(h);
       return s;
     });
+    setDirty(true);
     setMessage('');
   }
 
   function toutSelectionner() {
     if (estPasse) return;
     setSelection(new Set(HEURES));
+    setDirty(true);
     setMessage('');
   }
 
@@ -64,6 +82,7 @@ export default function CalendrierDispoMobile({ user }) {
     if (estPasse) return;
     if (!window.confirm('Effacer toutes les disponibilités de ce jour ?')) return;
     setSelection(new Set());
+    setDirty(true);
     setMessage('');
   }
 
@@ -100,6 +119,7 @@ export default function CalendrierDispoMobile({ user }) {
       } catch (err) { erreurs++; }
     }
     await charger();
+    setDirty(false);
     if (erreurs > 0) setMessage(`${total} plage(s) sauvegardée(s), ${erreurs} erreur(s)`);
     else setMessage(total > 0 ? `${total} plage(s) sauvegardée(s) avec succès` : 'Disponibilités mises à jour');
     setLoading(false);
@@ -111,7 +131,7 @@ export default function CalendrierDispoMobile({ user }) {
       {/* Navigation jour */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
         marginBottom:'16px', gap:'8px' }}>
-        <button onClick={() => setJour(d => addDays(d, -1))}
+        <button onClick={() => naviguerJour(d => addDays(d, -1))}
           style={{ width:'40px', height:'40px', background:'white', border:'1px solid #ddd',
             borderRadius:'50%', cursor:'pointer', fontSize:'20px', display:'flex',
             alignItems:'center', justifyContent:'center' }}>‹</button>
@@ -132,7 +152,7 @@ export default function CalendrierDispoMobile({ user }) {
           )}
         </div>
 
-        <button onClick={() => setJour(d => addDays(d, 1))}
+        <button onClick={() => naviguerJour(d => addDays(d, 1))}
           style={{ width:'40px', height:'40px', background:'white', border:'1px solid #ddd',
             borderRadius:'50%', cursor:'pointer', fontSize:'20px', display:'flex',
             alignItems:'center', justifyContent:'center' }}>›</button>

@@ -21,12 +21,22 @@ function fmtJour(d) {
   return d.toLocaleDateString('fr-CA', { weekday:'short', day:'numeric', month:'short' });
 }
 
-export default function CalendrierDispo({ user }) {
+export default function CalendrierDispo({ user, onDirtyChange }) {
   const [semaine, setSemaine]     = useState(getSemaine(new Date()));
   const [dispos, setDispos]       = useState([]);
   const [selection, setSelection] = useState({});
   const [message, setMessage]     = useState('');
   const [loading, setLoading]     = useState(false);
+  const [dirty, setDirty]         = useState(false);
+
+  // Prévenir la fermeture du navigateur si modifications non sauvegardées
+  useEffect(() => {
+    const handler = e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty]);
 
   // Plage fixe
   const [plageDeb, setPlageDeb]   = useState('07:00');
@@ -62,6 +72,7 @@ export default function CalendrierDispo({ user }) {
         for (let h = hDeb; h < hFin; h++) sel[date].add(h);
       });
       setSelection(sel);
+      setDirty(false);
     } catch (err) { console.error(err); }
     setLoading(false);
   }
@@ -74,6 +85,7 @@ export default function CalendrierDispo({ user }) {
     if (estPasse(date)) return;
     dragStart.current = { date, heure };
     dragMode.current  = estSelectionne(date, heure) ? 'remove' : 'add';
+    setDirty(true);
     toggleCreneau(date, heure, dragMode.current);
   }
 
@@ -112,6 +124,7 @@ export default function CalendrierDispo({ user }) {
 
   // --- Appliquer plage fixe ---
   function appliquerPlageFixe() {
+    setDirty(true);
     const hDeb = parseInt(plageDeb.split(':')[0]);
     const hFin = parseInt(plageFin.split(':')[0]);
     if (hFin <= hDeb) { setMessage('Heure de fin doit etre apres heure de debut'); return; }
@@ -195,6 +208,7 @@ export default function CalendrierDispo({ user }) {
       }
     }
     await chargerDispos();
+    setDirty(false);
     if (erreurs > 0) setMessage(`${total} plages sauvegardées, ${erreurs} erreurs`);
     else setMessage(total > 0 ? `${total} plage(s) sauvegardée(s) avec succès` : 'Disponibilités mises à jour');
     setLoading(false);

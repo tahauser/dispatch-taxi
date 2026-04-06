@@ -9,7 +9,15 @@ const BLEU = '#1F4E79';
 
 export default function PortailChauffeur({ user, onLogout }) {
   const [onglet, setOnglet] = useState('programme');
+  const [disposDirty, setDisposDirty] = useState(false);
   const isMobile = useIsMobile();
+
+  function changerOnglet(id) {
+    if (id !== 'disponibilites' && disposDirty) {
+      if (!window.confirm('Vous avez des disponibilités non sauvegardées. Quitter sans sauvegarder ?')) return;
+    }
+    setOnglet(id);
+  }
 
   if (isMobile) {
     return (
@@ -38,7 +46,7 @@ export default function PortailChauffeur({ user, onLogout }) {
         <div style={{ flex:1, overflowY:'auto', padding:'16px',
           paddingBottom:'calc(72px + env(safe-area-inset-bottom))' }}>
           {onglet === 'programme'      && <CalendrierProgrammeMobile user={user} />}
-          {onglet === 'disponibilites' && <CalendrierDispoMobile user={user} />}
+          {onglet === 'disponibilites' && <CalendrierDispoMobile user={user} onDirtyChange={setDisposDirty} />}
         </div>
 
         {/* Navigation bas */}
@@ -55,7 +63,7 @@ export default function PortailChauffeur({ user, onLogout }) {
             { id:'programme',      icon:'📅', label:'Mon programme' },
             { id:'disponibilites', icon:'🕐', label:'Mes dispos' },
           ].map(o => (
-            <button key={o.id} onClick={() => setOnglet(o.id)}
+            <button key={o.id} onClick={() => changerOnglet(o.id)}
               style={{
                 flex:1,
                 padding:'10px 4px 8px',
@@ -67,7 +75,13 @@ export default function PortailChauffeur({ user, onLogout }) {
                 borderTop: onglet === o.id ? `3px solid ${BLEU}` : '3px solid transparent',
                 transition:'color 0.15s',
               }}>
-              <span style={{ fontSize:'22px', lineHeight:1 }}>{o.icon}</span>
+              <span style={{ fontSize:'22px', lineHeight:1, position:'relative' }}>
+                {o.icon}
+                {o.id === 'disponibilites' && disposDirty && (
+                  <span style={{ position:'absolute', top:0, right:'-4px', width:'8px', height:'8px',
+                    background:'#e53935', borderRadius:'50%', border:'1.5px solid white' }} />
+                )}
+              </span>
               <span style={{ fontSize:'11px', fontWeight: onglet === o.id ? '700' : '400' }}>
                 {o.label}
               </span>
@@ -102,12 +116,17 @@ export default function PortailChauffeur({ user, onLogout }) {
             { id:'programme',      label:'📅  Mon programme' },
             { id:'disponibilites', label:'🕐  Mes disponibilités' },
           ].map(o => (
-            <button key={o.id} onClick={() => setOnglet(o.id)}
+            <button key={o.id} onClick={() => changerOnglet(o.id)}
               style={{ padding:'10px 24px', border:'none', borderRadius:'6px 6px 0 0',
                 cursor:'pointer', fontWeight: onglet===o.id ? '600' : '400',
                 background: onglet===o.id ? 'white' : '#e0e9f3',
-                color: onglet===o.id ? BLEU : '#555', fontSize:'14px' }}>
+                color: onglet===o.id ? BLEU : '#555', fontSize:'14px',
+                position:'relative' }}>
               {o.label}
+              {o.id === 'disponibilites' && disposDirty && (
+                <span style={{ position:'absolute', top:'8px', right:'8px', width:'7px', height:'7px',
+                  background:'#e53935', borderRadius:'50%' }} />
+              )}
             </button>
           ))}
         </div>
@@ -115,7 +134,7 @@ export default function PortailChauffeur({ user, onLogout }) {
         <div style={{ background:'white', borderRadius:'0 10px 10px 10px',
           boxShadow:'0 2px 8px rgba(0,0,0,0.08)', padding:'24px' }}>
           {onglet === 'programme'      && <CalendrierProgramme user={user} />}
-          {onglet === 'disponibilites' && <CalendrierDispo user={user} />}
+          {onglet === 'disponibilites' && <CalendrierDispo user={user} onDirtyChange={setDisposDirty} />}
         </div>
       </div>
     </div>
