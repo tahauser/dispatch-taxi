@@ -161,9 +161,9 @@ export default function Dashboard({ user, onLogout }) {
               fontSize:'14px', background:'white' }} />
           <button onClick={() => { const d=new Date(date); d.setDate(d.getDate()+1); setDate(d.toISOString().split('T')[0]); }}
             style={{ padding:'8px 12px', background:'white', border:'1px solid #ddd', borderRadius:'6px', cursor:'pointer', fontSize:'18px' }}>›</button>
-          <button onClick={proposerAffectations} disabled={loading || dejaPropose}
-            style={{ padding:'8px 16px', background: dejaPropose ? '#e0e0e0' : '#2E75B6', color: dejaPropose ? '#999' : 'white', border: dejaPropose ? '1px solid #ccc' : 'none',
-              borderRadius:'6px', cursor: dejaPropose ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
+          <button onClick={proposerAffectations} disabled={loading || dejaPropose || trajets.length === 0}
+            style={{ padding:'8px 16px', background: (dejaPropose || trajets.length === 0) ? '#e0e0e0' : '#2E75B6', color: (dejaPropose || trajets.length === 0) ? '#999' : 'white', border: (dejaPropose || trajets.length === 0) ? '1px solid #ccc' : 'none',
+              borderRadius:'6px', cursor: (dejaPropose || trajets.length === 0) ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
             {loading ? '...' : 'Proposer affectations'}
           </button>
           <button onClick={reinitialiserAffectations} disabled={loading || !dejaPropose}
