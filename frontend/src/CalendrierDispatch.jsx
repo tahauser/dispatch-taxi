@@ -131,6 +131,13 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
   const couleur = {};
   chauffeursTriés.forEach((c, i) => { couleur[c.id] = COULEURS[i % COULEURS.length]; });
 
+  // Note journée par chauffeur (première dispo non nulle)
+  const noteParChauffeur = {};
+  dispos.forEach(d => {
+    if (d.note_journee && !noteParChauffeur[d.chauffeur_id])
+      noteParChauffeur[d.chauffeur_id] = d.note_journee;
+  });
+
   function getDispos(id) { return dispos.filter(d => d.chauffeur_id === id); }
   function estDispo(id, h) {
     return getDispos(id).some(d => {
@@ -398,9 +405,12 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
                   <div style={{ height: HAUTEUR_HEADER, minHeight: HAUTEUR_HEADER, maxHeight: HAUTEUR_HEADER, background: 'white', borderBottom: `1px solid ${cl}`, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '0', position: 'sticky', top: 0, zIndex: 15, transition: 'background 0.15s' }}>
                     <div
                       onClick={async () => { if (onEnvoiIndividuel && confirm(`Envoyer le programme par email a ${ch.prenom} ${ch.nom} ?`)) { await onEnvoiIndividuel(ch.id); await charger(); if (onRefresh) onRefresh(); } }}
-                      title='Envoyer programme par email'
-                      style={{ fontWeight: '700', fontSize: '11px', color: isTarget ? 'white' : cl, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', cursor: onEnvoiIndividuel ? 'pointer' : 'default', textDecoration: onEnvoiIndividuel ? 'underline' : 'none' }}>
-                      {ch.prenom} {ch.nom}
+                      title={noteParChauffeur[ch.id] ? `📝 ${noteParChauffeur[ch.id]}` : 'Envoyer programme par email'}
+                      style={{ fontWeight: '700', fontSize: '11px', color: isTarget ? 'white' : cl, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', cursor: onEnvoiIndividuel ? 'pointer' : 'default', textDecoration: onEnvoiIndividuel ? 'underline' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{ch.prenom} {ch.nom}</span>
+                      {noteParChauffeur[ch.id] && (
+                        <span style={{ fontSize: '10px', flexShrink: 0 }}>📝</span>
+                      )}
                     </div>
                     <div style={{ fontSize: '10px', color: isTarget ? 'rgba(255,255,255,0.8)' : '#888' }}>
                       N°{ch.numero_chauffeur} · {ch.type_vehicule}
