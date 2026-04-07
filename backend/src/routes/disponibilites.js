@@ -52,12 +52,27 @@ router.post('/', authMiddleware, requireRole('chauffeur'), checkDeadline, async 
 
 router.delete('/:id', authMiddleware, requireRole('chauffeur'), async (req, res) => {
   try {
-    const result = await pool.query(
-      'DELETE FROM disponibilites WHERE id=$1 AND chauffeur_id=$2 RETURNING id',
+    // Récupérer la dispo pour connaître sa date
+    const check = await pool.query(
+      'SELECT date_dispo FROM disponibilites WHERE id=$1 AND chauffeur_id=$2',
       [req.params.id, req.user.id]
     );
-    if (result.rows.length === 0)
+    if (check.rows.length === 0)
       return res.status(404).json({ message: 'Disponibilité non trouvée' });
+
+    // Appliquer la même règle deadline que le POST
+    const dateDispo = check.rows[0].date_dispo.toISOString().split('T')[0];
+    const now       = new Date();
+    const heure     = parseInt(process.env.DEADLINE_HEURE  || '18');
+    const minute    = parseInt(process.env.DEADLINE_MINUTE || '0');
+    const deadline  = new Date(); deadline.setHours(heure, minute, 0, 0);
+    const demain    = new Date(); demain.setDate(demain.getDate() + 1);
+    const strDemain = `${demain.getFullYear()}-${String(demain.getMonth()+1).padStart(2,'0')}-${String(demain.getDate()).padStart(2,'0')}`;
+
+    if (now >= deadline && dateDispo === strDemain)
+      return res.status(403).json({ message: `Saisie fermée après ${heure}h${String(minute).padStart(2,'0')} pour le lendemain` });
+
+    await pool.query('DELETE FROM disponibilites WHERE id=$1', [req.params.id]);
     res.json({ message: 'Disponibilité supprimée' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
