@@ -63,7 +63,7 @@ function ActionBtn({ onClick, disabled, color, label, icon }) {
 }
 
 // Modal sélection chauffeur
-function ModalAffecter({ trajet, chauffeurs, dispos, affectations, onAffecter, onClose }) {
+function ModalAffecter({ trajet, chauffeurs, dispos, affectations, noteParChauffeur = {}, onAffecter, onClose }) {
   function hasConflict(chId) {
     const tD = toMin(trajet.heure_prise), tF = toMin(trajet.heure_arrivee);
     return affectations.filter(a => a.chauffeur_id === chId).some(a => {
@@ -130,15 +130,25 @@ function ModalAffecter({ trajet, chauffeurs, dispos, affectations, onAffecter, o
                   display:'flex', justifyContent:'space-between', alignItems:'center',
                   textAlign:'left',
                 }}>
-                <div>
+                <div style={{ flex:1 }}>
                   <div style={{ fontSize:'15px', fontWeight:'600',
-                    color: conflict ? '#aaa' : '#333' }}>
+                    color: conflict ? '#aaa' : '#333', display:'flex', alignItems:'center', gap:'5px' }}>
                     {ch.prenom} {ch.nom}
+                    {noteParChauffeur[ch.id] && (
+                      <span style={{ fontSize:'13px' }} title={noteParChauffeur[ch.id]}>📝</span>
+                    )}
                   </div>
                   <div style={{ fontSize:'12px', color:'#888', marginTop:'2px' }}>
                     N° {ch.numero_chauffeur} · {ch.type_vehicule}
                     {nbAff > 0 && ` · ${nbAff} trajet(s) ce jour`}
                   </div>
+                  {noteParChauffeur[ch.id] && (
+                    <div style={{ fontSize:'11px', color:'#666', marginTop:'4px',
+                      fontStyle:'italic', background:'#fffde7', borderRadius:'4px',
+                      padding:'3px 8px', borderLeft:'2px solid #FDD835' }}>
+                      {noteParChauffeur[ch.id]}
+                    </div>
+                  )}
                 </div>
                 <div style={{ display:'flex', flexDirection:'column',
                   alignItems:'flex-end', gap:'4px', flexShrink:0, marginLeft:'12px' }}>
@@ -287,6 +297,11 @@ export default function DashboardMobile({ user, onLogout }) {
   }
 
   const nbAffectes     = affectations.length;
+  const noteParChauffeur = {};
+  dispos.forEach(d => {
+    if (d.note_journee && !noteParChauffeur[d.chauffeur_id])
+      noteParChauffeur[d.chauffeur_id] = d.note_journee;
+  });
   const nbNonAffectes  = trajets.filter(t => !affectations.find(a => a.trajet_id === t.id)).length;
   const nbDisposChauff = [...new Set(dispos.map(d => d.chauffeur_id))].length;
   const estAujourdhui  = date === today;
@@ -314,6 +329,7 @@ export default function DashboardMobile({ user, onLogout }) {
           chauffeurs={chauffeurs}
           dispos={dispos}
           affectations={affectations}
+          noteParChauffeur={noteParChauffeur}
           onAffecter={ch => affecter(trajetAAffecter, ch)}
           onClose={() => setTrajetAAffecter(null)}
         />
@@ -476,12 +492,21 @@ export default function DashboardMobile({ user, onLogout }) {
                   <div style={{ padding:'10px 14px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                       <div>
-                        <div style={{ fontSize:'14px', fontWeight:'600', color:'#333' }}>
+                        <div style={{ fontSize:'14px', fontWeight:'600', color:'#333',
+                          display:'flex', alignItems:'center', gap:'5px' }}>
                           {a.prenom} {a.nom}
+                          {noteParChauffeur[a.chauffeur_id] && <span style={{ fontSize:'12px' }}>📝</span>}
                         </div>
                         <div style={{ fontSize:'12px', color:'#888', marginTop:'2px' }}>
                           N° {a.numero_chauffeur} · {a.type_vehicule}
                         </div>
+                        {noteParChauffeur[a.chauffeur_id] && (
+                          <div style={{ fontSize:'11px', color:'#666', marginTop:'4px',
+                            fontStyle:'italic', background:'#fffde7', borderRadius:'4px',
+                            padding:'3px 8px', borderLeft:'2px solid #FDD835' }}>
+                            {noteParChauffeur[a.chauffeur_id]}
+                          </div>
+                        )}
                         {a.adresse_prise && (
                           <div style={{ fontSize:'11px', color:'#666', marginTop:'4px',
                             display:'flex', gap:'4px' }}>
