@@ -7,7 +7,8 @@
     "dev": "nodemon src/index.js",
     "db-init": "node src/utils/initDb.js",
     "import-trajets": "node src/utils/importExcel.js",
-    "import-chauffeurs": "node src/utils/importChauffeurs.js"
+    "import-chauffeurs": "node src/utils/importChauffeurs.js",
+    "seed": "node src/utils/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
