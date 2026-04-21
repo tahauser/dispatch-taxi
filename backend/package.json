@@ -7,7 +7,9 @@
     "dev": "nodemon src/index.js",
     "db-init": "node src/utils/initDb.js",
     "import-trajets": "node src/utils/importExcel.js",
-    "import-chauffeurs": "node src/utils/importChauffeurs.js"
+    "import-chauffeurs": "node src/utils/importChauffeurs.js",
+    "seed": "node src/utils/seed.js",
+    "migrate": "psql $DATABASE_URL -f migrations/20260421_add_routes_stops_gps_logs.sql"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
