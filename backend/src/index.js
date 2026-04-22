@@ -17,8 +17,11 @@ app.use('/api/auth',           require('./routes/auth'));
 app.use('/api/trajets',        require('./routes/trajets'));
 app.use('/api/disponibilites', require('./routes/disponibilites'));
 
-app.use('/api/chauffeurs', require('./routes/chauffeurs'));
+app.use('/api/chauffeurs',   require('./routes/chauffeurs'));
 app.use('/api/affectations', require('./routes/affectations'));
+app.use('/api/routes',       require('./routes/routes'));
+app.use('/api/stops',        require('./routes/stops'));
+app.use('/api/gps-logs',     require('./routes/gps_logs'));
 
 app.get('/api/health', (req, res) => res.json({
   status: 'ok', version: '1.0.0', heure: new Date().toISOString()
