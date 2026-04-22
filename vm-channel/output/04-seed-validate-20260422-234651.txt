@@ -1,0 +1,64 @@
+=== VM-AGENT OUTPUT ===
+Script : 04-seed-validate.sh
+Date   : 2026-04-22 23:46:51
+Branch : claude/mobile-scaffold-auth-route
+========================
+── 1. DÉPLOIEMENT SEED.JS ──
+✓ seed.js mis à jour (SELECT + INSERT/UPDATE)
+
+── 2. SEED MOBILE-TEST ──
+═══════════════════════════════════════════
+   SEED MOBILE TEST
+═══════════════════════════════════════════
+
+Connexion PostgreSQL etablie
+✓ Chauffeur mobile-test (id: d72307ff-4c1c-4cda-b65a-9e40b1757a45)
+✓ Route 'Tournée Mobile Test' — 3 stops pour 2026-04-22
+✓ Email        : mobile-test@dispatchtaxi.local
+✓ Mot de passe : MobileTest2026!
+═══════════════════════════════════════════
+
+
+── 3. LOGIN ──
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImQ3M",
+  "chauffeur": {
+    "id": "d72307ff-4c1c-4cda-b65a-9e40b1757a45",
+    "numero_chauffeur": "MOB-001",
+    "nom": "Test",
+    "prenom": "Mobile",
+    "email": "mobile-test@dispatchtaxi.local",
+    "role": "chauffeur",
+    "type_vehicule": "TAXI"
+  }
+}
+✓ Token reçu
+
+── 4. ROUTE DU JOUR ──
+{
+  "nom": "Tournée Mobile Test",
+  "statut": "planifiee",
+  "date_planifiee": "2026-04-22T00:00:00.000Z",
+  "nb_stops": 3,
+  "stops": [
+    {
+      "ordre": 1,
+      "adresse": "1000 Rue de la Gauchetière O, Montréal",
+      "statut": "en_attente"
+    },
+    {
+      "ordre": 2,
+      "adresse": "1500 Boul René-Lévesque O, Montréal",
+      "statut": "en_attente"
+    },
+    {
+      "ordre": 3,
+      "adresse": "2000 Rue Saint-Catherine O, Montréal",
+      "statut": "en_attente"
+    }
+  ]
+}
+
+✓ VALIDATION MOBILE M1 TERMINÉE
+EXIT: 0
+========================
