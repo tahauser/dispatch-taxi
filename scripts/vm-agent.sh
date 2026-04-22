@@ -18,6 +18,7 @@ while true; do
 
     # Pull latest from GitHub
     if ! git pull --rebase origin "$BRANCH" -q 2>>"$LOG_FILE"; then
+        git rebase --abort 2>/dev/null || true
         log "git pull failed, retrying in 15s"
         sleep 15
         continue
@@ -58,10 +59,15 @@ while true; do
     if $processed; then
         git add "$OUTPUT_DIR/"
         git commit -m "vm-agent: output $(date '+%Y%m%d-%H%M%S')" 2>>"$LOG_FILE" || true
+    fi
+
+    # Always push if there are unpushed commits (handles failed push from previous cycle)
+    AHEAD=$(git rev-list "origin/$BRANCH..HEAD" --count 2>/dev/null || echo 0)
+    if [ "$AHEAD" -gt 0 ]; then
         if git push origin "$BRANCH" 2>>"$LOG_FILE"; then
-            log "Results pushed to GitHub"
+            log "$AHEAD commit(s) pushed to GitHub"
         else
-            log "Push failed — will retry next cycle"
+            log "Push failed ($AHEAD commits pending) — will retry next cycle"
         fi
     fi
 
