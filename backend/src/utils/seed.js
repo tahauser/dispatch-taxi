@@ -408,24 +408,34 @@ async function seedMobileTest() {
 
   const passwordHash = await bcrypt.hash('MobileTest2026!', 10);
 
-  // Upsert chauffeur (idempotent par email)
-  const { rows } = await pool.query(`
-    INSERT INTO chauffeurs
-      (numero_chauffeur, nom, prenom, email, adresse_domicile,
-       type_vehicule, actif, mot_de_passe_hash, role)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-    ON CONFLICT (email) DO UPDATE SET
-      mot_de_passe_hash = EXCLUDED.mot_de_passe_hash,
-      actif             = EXCLUDED.actif
-    RETURNING id`,
-    [
-      'MOB-001', 'Test', 'Mobile',
-      'mobile-test@dispatchtaxi.local',
-      '1 Rue Test, Montréal H0H 0H0',
-      'TAXI', true, passwordHash, 'chauffeur',
-    ]
+  // Upsert chauffeur sans ON CONFLICT (pas de contrainte UNIQUE sur email)
+  const existing = await pool.query(
+    `SELECT id FROM chauffeurs WHERE email = $1`,
+    ['mobile-test@dispatchtaxi.local']
   );
-  const mobileId = rows[0].id;
+  let mobileId;
+  if (existing.rows.length > 0) {
+    mobileId = existing.rows[0].id;
+    await pool.query(
+      `UPDATE chauffeurs SET mot_de_passe_hash = $1, actif = true WHERE id = $2`,
+      [passwordHash, mobileId]
+    );
+  } else {
+    const { rows } = await pool.query(`
+      INSERT INTO chauffeurs
+        (numero_chauffeur, nom, prenom, email, adresse_domicile,
+         type_vehicule, actif, mot_de_passe_hash, role)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      RETURNING id`,
+      [
+        'MOB-001', 'Test', 'Mobile',
+        'mobile-test@dispatchtaxi.local',
+        '1 Rue Test, Montréal H0H 0H0',
+        'TAXI', true, passwordHash, 'chauffeur',
+      ]
+    );
+    mobileId = rows[0].id;
+  }
   console.log(`✓ Chauffeur mobile-test (id: ${mobileId})`);
 
   // Route idempotente pour aujourd'hui
