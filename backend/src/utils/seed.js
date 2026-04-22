@@ -419,7 +419,7 @@ async function seedMobileTest() {
       actif             = EXCLUDED.actif
     RETURNING id`,
     [
-      'MOBILE-TEST-001', 'Test', 'Mobile',
+      'MOB-001', 'Test', 'Mobile',
       'mobile-test@dispatchtaxi.local',
       '1 Rue Test, Montréal H0H 0H0',
       'TAXI', true, passwordHash, 'chauffeur',
