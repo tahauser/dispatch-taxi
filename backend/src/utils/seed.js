@@ -327,7 +327,7 @@ async function run() {
 
   // Créer 2 routes (une par chauffeur parmi les 2 premiers disponibles)
   const chauffeurRows = await pool.query(
-    `SELECT id, nom, prenom FROM chauffeurs WHERE actif = true ORDER BY created_at LIMIT 2`
+    `SELECT id, nom, prenom FROM chauffeurs WHERE actif = true ORDER BY cree_le LIMIT 2`
   );
 
   const ROUTES_DEF = [
