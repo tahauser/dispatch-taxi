@@ -1,0 +1,9 @@
+{
+  "name": "dispatch-taxi",
+  "private": true,
+  "scripts": {
+    "mobile:start": "cd mobile && expo start",
+    "mobile:android": "cd mobile && expo start --android",
+    "mobile:ios": "cd mobile && expo start --ios"
+  }
+}

@@ -9,7 +9,8 @@
     "import-trajets": "node src/utils/importExcel.js",
     "import-chauffeurs": "node src/utils/importChauffeurs.js",
     "seed": "node src/utils/seed.js",
-    "migrate": "psql $DATABASE_URL -f migrations/20260421_add_routes_stops_gps_logs.sql"
+    "migrate": "psql $DATABASE_URL -f migrations/20260421_add_routes_stops_gps_logs.sql",
+    "seed:mobile-test": "MOBILE_ONLY=true node src/utils/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -398,8 +398,82 @@ async function run() {
   process.exit(0);
 }
 
-run().catch(err => {
-  console.error('\n❌ Erreur seed:', err.message);
-  console.error(err.stack);
-  process.exit(1);
-});
+// ── Compte de test mobile (standalone) ───────────────────────────────────────
+
+async function seedMobileTest() {
+  const bcrypt = require('bcryptjs');
+  console.log('═══════════════════════════════════════════');
+  console.log('   SEED MOBILE TEST');
+  console.log('═══════════════════════════════════════════\n');
+
+  const passwordHash = await bcrypt.hash('MobileTest2026!', 10);
+
+  // Upsert chauffeur (idempotent par email)
+  const { rows } = await pool.query(`
+    INSERT INTO chauffeurs
+      (numero_chauffeur, nom, prenom, email, adresse_domicile,
+       type_vehicule, actif, mot_de_passe_hash, role)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+    ON CONFLICT (email) DO UPDATE SET
+      mot_de_passe_hash = EXCLUDED.mot_de_passe_hash,
+      actif             = EXCLUDED.actif
+    RETURNING id`,
+    [
+      'MOBILE-TEST-001', 'Test', 'Mobile',
+      'mobile-test@dispatchtaxi.local',
+      '1 Rue Test, Montréal H0H 0H0',
+      'TAXI', true, passwordHash, 'chauffeur',
+    ]
+  );
+  const mobileId = rows[0].id;
+  console.log(`✓ Chauffeur mobile-test (id: ${mobileId})`);
+
+  // Route idempotente pour aujourd'hui
+  const today = new Date().toISOString().split('T')[0];
+  await pool.query(
+    `DELETE FROM routes WHERE chauffeur_id = $1 AND nom = 'Tournée Mobile Test'`,
+    [mobileId]
+  );
+
+  const routeRes = await pool.query(
+    `INSERT INTO routes (chauffeur_id, nom, date_planifiee)
+     VALUES ($1, 'Tournée Mobile Test', $2) RETURNING id`,
+    [mobileId, today]
+  );
+  const routeId = routeRes.rows[0].id;
+
+  const STOPS = [
+    { ordre: 1, adresse: '1000 Rue de la Gauchetière O, Montréal', lat: 45.5009, lng: -73.5694, offset: 0 },
+    { ordre: 2, adresse: '1500 Boul René-Lévesque O, Montréal',    lat: 45.4977, lng: -73.5786, offset: 30 },
+    { ordre: 3, adresse: '2000 Rue Saint-Catherine O, Montréal',   lat: 45.4933, lng: -73.5829, offset: 60 },
+  ];
+
+  for (const s of STOPS) {
+    const total = 8 * 60 + s.offset;
+    const hh = String(Math.floor(total / 60)).padStart(2, '0');
+    const mm = String(total % 60).padStart(2, '0');
+    await pool.query(
+      `INSERT INTO stops
+         (route_id, ordre, adresse, latitude, longitude, rayon_geofence_m, heure_arrivee_prevue)
+       VALUES ($1,$2,$3,$4,$5,50,$6)`,
+      [routeId, s.ordre, s.adresse, s.lat, s.lng, `${today}T${hh}:${mm}:00`]
+    );
+  }
+
+  console.log(`✓ Route 'Tournée Mobile Test' — ${STOPS.length} stops pour ${today}`);
+  console.log(`✓ Email        : mobile-test@dispatchtaxi.local`);
+  console.log(`✓ Mot de passe : MobileTest2026!`);
+  console.log('═══════════════════════════════════════════\n');
+}
+
+if (process.env.MOBILE_ONLY === 'true') {
+  seedMobileTest()
+    .then(() => process.exit(0))
+    .catch(err => { console.error('❌', err.message); process.exit(1); });
+} else {
+  run().catch(err => {
+    console.error('\n❌ Erreur seed:', err.message);
+    console.error(err.stack);
+    process.exit(1);
+  });
+}
