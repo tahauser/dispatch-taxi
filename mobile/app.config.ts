@@ -40,7 +40,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // usesCleartextTraffic: true dans AndroidManifest est géré par le plugin expo-build-properties
     // Ajouter: npx expo install expo-build-properties + config plugin si HTTP en production
   },
-  plugins: ['expo-router', 'expo-secure-store'],
+  plugins: [
+    'expo-router',
+    'expo-secure-store',
+    // FIXME: Retirer usesCleartextTraffic quand le backend passera en HTTPS
+    ['expo-build-properties', { android: { usesCleartextTraffic: true } }],
+  ],
   experiments: {
     typedRoutes: true,
   },
