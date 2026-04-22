@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '../constants/theme';
+import { colors, spacing } from '../constants/theme';
 import { ChauffeurProfil } from '../types/api';
 
 interface RouteHeaderProps {

@@ -75,7 +75,7 @@ export default function RouteDuJourScreen() {
       ) : route === null ? (
         <View style={styles.center}>
           <Text style={styles.emptyEmoji}>🚖</Text>
-          <Text style={styles.emptyTitle}>Aucune tournée aujourd'hui</Text>
+          <Text style={styles.emptyTitle}>Aucune tourn{'é'}e aujourd&apos;hui</Text>
           <Text style={styles.emptySubtitle}>Votre dispatch vous assignera une route le matin.</Text>
           <Button label="Actualiser" onPress={refresh} variant="ghost" style={{ marginTop: spacing.lg }} />
         </View>

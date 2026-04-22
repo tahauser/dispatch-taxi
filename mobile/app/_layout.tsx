@@ -17,7 +17,7 @@ function RootLayoutNav() {
     } else if (chauffeur && !inApp) {
       router.replace('/(app)');
     }
-  }, [chauffeur, loading, segments]);
+  }, [chauffeur, loading, segments, router]);
 
   // Ne rien rendre tant que l'hydratation n'est pas terminée
   if (loading) return null;

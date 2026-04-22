@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../../src/components/Button';
 import { colors, radius, shadow, spacing, typography } from '../../../src/constants/theme';
-import { getRoute } from '../../../src/api/routes';
 import { skipStop } from '../../../src/api/stops';
 import { Stop, StatutStop } from '../../../src/types/api';
 import { extractMessage } from '../../../src/utils/errors';
@@ -32,23 +31,15 @@ export default function StopDetailScreen() {
   const [skipLoading, setSkipLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    loadStop();
-  }, [id]);
-
-  async function loadStop() {
+  const loadStop = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // On passe par getRoute → on cherche le stop dans les stops de la route
-      // Pour l'instant on navigue depuis la liste où on a déjà les données
-      // On recharge la route du jour pour avoir les données fraîches
       const { getRouteDuJour } = await import('../../../src/api/routes');
       const route = await getRouteDuJour();
       if (route) {
         const found = route.stops.find(s => s.id === id);
-        if (found) { setStop(found); setLoading(false); return; }
+        if (found) { setStop(found); return; }
       }
       setError('Stop introuvable');
     } catch (err) {
@@ -56,7 +47,12 @@ export default function StopDetailScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    loadStop();
+  }, [id, loadStop]);
 
   async function handleSkip() {
     if (!stop) return;
@@ -154,7 +150,7 @@ export default function StopDetailScreen() {
               loading={skipLoading}
             />
             <Text style={styles.hint}>
-              L'arrivée automatique sera activée en Mobile M2 (GPS).
+              L&apos;arriv{'é'}e automatique sera activ{'é'}e en Mobile M2 (GPS).
             </Text>
           </View>
         )}

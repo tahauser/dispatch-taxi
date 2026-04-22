@@ -40,13 +40,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setState({ chauffeur: null, token: null, loading: false });
   }, []);
 
-  logoutRef.current = logout;
+  useEffect(() => {
+    logoutRef.current = logout;
+  }, [logout]);
 
   const reload = useCallback(async () => {
     try {
       const profil = await me();
       setState(prev => ({ ...prev, chauffeur: profil, loading: false }));
-    } catch (_err) {
+    } catch {
       await logout();
     }
   }, [logout]);
