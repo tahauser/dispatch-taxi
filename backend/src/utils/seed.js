@@ -473,7 +473,13 @@ async function seedMobileTest() {
   console.log(`✓ Route 'Tournée Mobile Test' — ${STOPS.length} stops pour ${today}`);
 
   // Trajet + affectation pour le portail web (système trajets/affectations)
+  // DELETE+INSERT (pas de contrainte UNIQUE garantie sur code_trajet en DB)
   const codeTrajet = `MOB-TRJ-${today.replace(/-/g, '')}`;
+  await pool.query(
+    `DELETE FROM affectations WHERE trajet_id IN (SELECT id FROM trajets WHERE code_trajet = $1)`,
+    [codeTrajet]
+  );
+  await pool.query(`DELETE FROM trajets WHERE code_trajet = $1`, [codeTrajet]);
   const { rows: trajetRows } = await pool.query(
     `INSERT INTO trajets
        (code_trajet, date_trajet, heure_prise, heure_arrivee,
@@ -482,17 +488,11 @@ async function seedMobileTest() {
              '1 Rue Test, Montréal H0H 0H0',
              'CHUM, 1000 Rue Saint-Denis, Montréal H2X 0C1',
              'Trajet de test mobile','en_attente')
-     ON CONFLICT (code_trajet) DO UPDATE
-       SET date_trajet = EXCLUDED.date_trajet
      RETURNING id`,
     [codeTrajet, today]
   );
   const trajetId = trajetRows[0].id;
 
-  await pool.query(
-    `DELETE FROM affectations WHERE chauffeur_id = $1 AND date_programme = $2`,
-    [mobileId, today]
-  );
   await pool.query(
     `INSERT INTO affectations (trajet_id, chauffeur_id, date_programme, proposee_par, statut)
      VALUES ($1,$2,$3,'manuel','confirmee')`,
