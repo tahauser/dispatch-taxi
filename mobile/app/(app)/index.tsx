@@ -15,6 +15,7 @@ import StopCard from '../../src/components/StopCard';
 import { colors, spacing, typography } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 import { useRouteDuJour } from '../../src/hooks/useRouteDuJour';
+import { useGpsTracking } from '../../src/hooks/useGpsTracking';
 import { Stop } from '../../src/types/api';
 import { completeRoute, startRoute } from '../../src/api/routes';
 import { extractMessage } from '../../src/utils/errors';
@@ -26,6 +27,12 @@ export default function RouteDuJourScreen() {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const { nearbyStop, hasPermission } = useGpsTracking({
+    routeId: route?.id ?? null,
+    stops: route?.stops ?? [],
+    enabled: route?.statut === 'en_cours',
+  });
 
   async function handleStart() {
     if (!route) return;
@@ -58,6 +65,8 @@ export default function RouteDuJourScreen() {
   function handleStopPress(stop: Stop) {
     router.push(`/(app)/stop/${stop.id}`);
   }
+
+  const isTracking = route?.statut === 'en_cours';
 
   return (
     <Screen edges={['top', 'bottom']}>
@@ -124,6 +133,25 @@ export default function RouteDuJourScreen() {
                 </View>
               )}
 
+              {/* Indicateur GPS — visible quand la tournée est en cours */}
+              {isTracking && (
+                <View style={[
+                  styles.gpsBadge,
+                  { backgroundColor: hasPermission ? colors.successLight : colors.warningLight },
+                ]}>
+                  <Text style={[
+                    styles.gpsText,
+                    { color: hasPermission ? colors.success : colors.warning },
+                  ]}>
+                    {hasPermission
+                      ? nearbyStop
+                        ? `GPS · Prochain stop détecté`
+                        : 'GPS actif'
+                      : 'GPS · Permission requise'}
+                  </Text>
+                </View>
+              )}
+
               <Text style={styles.sectionTitle}>Arrêts</Text>
             </View>
           }
@@ -184,6 +212,16 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontWeight: '600',
     fontSize: 15,
+  },
+  gpsBadge: {
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  gpsText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   sectionTitle: {
     ...typography.h3,

@@ -12,4 +12,9 @@ export async function updateStop(
   return api.patch<Stop>(`/stops/${id}`, patch);
 }
 
-// arriveStop exposé en Mobile M2 — GPS tracking
+export async function arriveStop(
+  id: string,
+  body: { latitude: number; longitude: number; timestamp_device: string },
+): Promise<Stop> {
+  return api.post<Stop>(`/stops/${id}/arrive`, body);
+}

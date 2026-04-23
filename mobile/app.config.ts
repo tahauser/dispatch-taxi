@@ -43,6 +43,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          'Dispatch Taxi utilise votre position pour détecter les arrêts et enregistrer votre trajet.',
+      },
+    ],
     // FIXME: Retirer usesCleartextTraffic quand le backend passera en HTTPS
     ['expo-build-properties', { android: { usesCleartextTraffic: true } }],
   ],
