@@ -1,0 +1,39 @@
+=== VM-AGENT OUTPUT ===
+Script : 07-diagnostic-routes.sh
+Date   : 2026-04-23 04:58:04
+Branch : main
+========================
+── DATES ──
+VM date UTC    : 2026-04-23 04:58:04
+node:internal/modules/cjs/loader:1210
+  throw err;
+  ^
+
+Error: Cannot find module 'pg'
+Require stack:
+- /home/azureuser/vm-channel-repo/[eval]
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+    at Module._load (node:internal/modules/cjs/loader:1038:27)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at [eval]:1:14
+    at runScriptInThisContext (node:internal/vm:209:10)
+    at node:internal/process/execution:118:14
+    at [eval]-wrapper:6:24
+    at runScript (node:internal/process/execution:101:62)
+    at evalScript (node:internal/process/execution:133:3) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/home/azureuser/vm-channel-repo/[eval]' ]
+}
+
+Node.js v20.20.2
+VM CURRENT_DATE: 
+
+── ROUTES EN DB POUR mobile-test ──
+SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string
+
+── APPEL API route-du-jour ──
+/home/azureuser/vm-channel-repo/vm-channel/input/07-diagnostic-routes.sh: line 36: syntax error near unexpected token `('
+/home/azureuser/vm-channel-repo/vm-channel/input/07-diagnostic-routes.sh: line 36: `TOKEN=\$(curl -s -X POST "$API/auth/login" \'
+Exit: 2
+========================
