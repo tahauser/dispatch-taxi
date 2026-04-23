@@ -13,6 +13,10 @@ log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
 
 export GIT_TERMINAL_PROMPT=0
 
+# Une seule instance à la fois
+exec 9>/tmp/vm-agent.lock
+flock -n 9 || { echo "vm-agent already running, exiting"; exit 1; }
+
 log "VM Agent started — repo=$REPO_DIR branch=$BRANCH"
 
 while true; do
