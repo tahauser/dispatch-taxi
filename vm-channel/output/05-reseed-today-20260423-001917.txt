@@ -1,0 +1,37 @@
+=== VM-AGENT OUTPUT ===
+Script : 05-reseed-today.sh
+Date   : 2026-04-23 00:19:17
+Branch : claude/mobile-scaffold-auth-route
+========================
+── Date VM : 2026-04-23 00:19:17 UTC ──
+
+── 1. DÉPLOIEMENT SEED.JS ──
+✓ seed.js à jour
+
+── 2. SEED MOBILE-TEST (date du jour) ──
+═══════════════════════════════════════════
+   SEED MOBILE TEST
+═══════════════════════════════════════════
+
+Connexion PostgreSQL etablie
+✓ Chauffeur mobile-test (id: d72307ff-4c1c-4cda-b65a-9e40b1757a45)
+✓ Route 'Tournée Mobile Test' — 3 stops pour 2026-04-23
+✓ Email        : mobile-test@dispatchtaxi.local
+✓ Mot de passe : MobileTest2026!
+═══════════════════════════════════════════
+
+
+── 3. VÉRIFICATION ROUTE EN DB ──
+SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string
+
+── 4. CURL ROUTE-DU-JOUR ──
+{
+  "nom": "Tournée Mobile Test",
+  "statut": "planifiee",
+  "date_planifiee": "2026-04-23T00:00:00.000Z",
+  "nb_stops": 3
+}
+
+✓ DONE
+EXIT: 0
+========================
