@@ -19,27 +19,26 @@ az vm run-command invoke \
     cd /home/azureuser/apps/dispatch-backend
     MOBILE_ONLY=true SEED_DATE="$LOCAL" node src/utils/seed.js
 
-    # ── Diagnostic API ──
-    echo ""
-    echo "── TEST API /routes?date=$LOCAL ──"
+    # ── Réponse API complète ──
     TOKEN=$(curl -s -X POST "http://localhost:3001/api/auth/login" \
       -H "Content-Type: application/json" \
       -d "{\"email\":\"mobile-test@dispatchtaxi.local\",\"mot_de_passe\":\"MobileTest2026!\"}" \
       | jq -r .token)
+    echo ""
+    echo "── API /routes?date=$LOCAL ──"
     curl -s "http://localhost:3001/api/routes?date=$LOCAL" \
-      -H "Authorization: Bearer $TOKEN" | jq "length, .[0].nom // \"VIDE\""
+      -H "Authorization: Bearer $TOKEN" | jq ".[0]"
 
-    # ── Nginx config ──
+    # ── Config nginx complète ──
     echo ""
-    echo "── NGINX ──"
-    grep -r "proxy_pass\|server_name\|listen" /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null | head -20
+    echo "── NGINX FULL ──"
+    cat /etc/nginx/sites-enabled/dispatch 2>/dev/null || cat /etc/nginx/conf.d/*.conf 2>/dev/null
 
-    # ── Port du frontend ──
+    # ── Port du process factures ──
     echo ""
-    echo "── PORTS PM2 ──"
-    sudo -u azureuser PM2_HOME=/home/azureuser/.pm2 pm2 list --no-color | grep -E "name|factures|dispatch"
+    echo "── FACTURES PORT ──"
+    sudo -u azureuser PM2_HOME=/home/azureuser/.pm2 pm2 show factures 2>/dev/null | grep -E "script|cwd|PORT|port|env"
 
     systemctl restart vm-agent
-    echo ""
     echo "DONE $LOCAL"
   '
