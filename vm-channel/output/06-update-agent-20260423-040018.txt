@@ -1,0 +1,6 @@
+=== VM-AGENT OUTPUT ===
+Script : 06-update-agent.sh
+Date   : 2026-04-23 04:00:18
+Branch : claude/mobile-scaffold-auth-route
+========================
+✓ vm-agent binary mis à jour

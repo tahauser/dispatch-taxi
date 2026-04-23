@@ -1,0 +1,31 @@
+=== VM-AGENT OUTPUT ===
+Script : 10-seed-trajets-portal.sh
+Date   : 2026-04-23 04:57:39
+Branch : claude/mobile-scaffold-auth-route
+========================
+── Date locale : 2026-04-23 (America/Toronto) ──
+HEAD is now at 05e6137 vm-channel: seed trajet+affectation pour portail web
+✓ seed.js déployé
+═══════════════════════════════════════════
+   SEED MOBILE TEST
+═══════════════════════════════════════════
+
+Connexion PostgreSQL etablie
+✓ Chauffeur mobile-test (id: d72307ff-4c1c-4cda-b65a-9e40b1757a45)
+✓ Route 'Tournée Mobile Test' — 3 stops pour 2026-04-23
+❌ there is no unique or exclusion constraint matching the ON CONFLICT specification
+
+── GET /api/routes?date=2026-04-23 (app mobile) ──
+{
+  "nom": "Tournée Mobile Test",
+  "statut": "planifiee",
+  "date_planifiee": "2026-04-23T00:00:00.000Z",
+  "nb_stops": 0
+}
+
+── GET /api/trajets?date=2026-04-23 (portail web) ──
+null
+
+DONE 2026-04-23
+Exit: 0
+========================
