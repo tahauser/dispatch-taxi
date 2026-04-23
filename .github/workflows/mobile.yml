@@ -1,0 +1,82 @@
+name: Mobile
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['mobile/**']
+  pull_request:
+    paths: ['mobile/**']
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options: [development, preview, production]
+      platform:
+        description: 'Plateforme cible'
+        required: true
+        default: 'all'
+        type: choice
+        options: [all, ios, android]
+
+jobs:
+  # ── Vérification TypeScript ─────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérification des types
+        run: npm run typecheck
+
+  # ── EAS Build (déclenché manuellement via workflow_dispatch) ────────────────
+  eas-build:
+    name: EAS Build · ${{ inputs.profile }} · ${{ inputs.platform }}
+    needs: typecheck
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Installer les dépendances
+        working-directory: mobile
+        run: npm ci
+
+      - name: EAS Build
+        working-directory: mobile
+        env:
+          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+        run: |
+          eas build \
+            --platform ${{ inputs.platform }} \
+            --profile ${{ inputs.profile }} \
+            --non-interactive \
+            --no-wait

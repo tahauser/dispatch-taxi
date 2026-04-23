@@ -57,6 +57,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     typedRoutes: true,
   },
   extra: {
+    eas: {
+      projectId: process.env.EXPO_PROJECT_ID,
+    },
     apiBaseUrl: process.env.API_BASE_URL ?? 'http://40.85.221.73:3001/api',
   },
 });
