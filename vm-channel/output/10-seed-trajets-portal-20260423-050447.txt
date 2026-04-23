@@ -1,0 +1,46 @@
+=== VM-AGENT OUTPUT ===
+Script : 10-seed-trajets-portal.sh
+Date   : 2026-04-23 05:04:47
+Branch : claude/mobile-scaffold-auth-route
+========================
+── Date locale : 2026-04-23 (America/Toronto) ──
+HEAD is now at 638de3d fix(seed): DELETE+INSERT pour trajet (pas de UNIQUE sur code_trajet)
+✓ seed.js déployé
+═══════════════════════════════════════════
+   SEED MOBILE TEST
+═══════════════════════════════════════════
+
+Connexion PostgreSQL etablie
+✓ Chauffeur mobile-test (id: d72307ff-4c1c-4cda-b65a-9e40b1757a45)
+✓ Route 'Tournée Mobile Test' — 3 stops pour 2026-04-23
+✓ Trajet 'MOB-TRJ-20260423' + affectation (portail web) pour 2026-04-23
+✓ Email        : mobile-test@dispatchtaxi.local
+✓ Mot de passe : MobileTest2026!
+═══════════════════════════════════════════
+
+
+── GET /api/routes?date=2026-04-23 (app mobile) ──
+{
+  "nom": "Tournée Mobile Test",
+  "statut": "planifiee",
+  "date_planifiee": "2026-04-23T00:00:00.000Z",
+  "nb_stops": 0
+}
+
+── GET /api/trajets?date=2026-04-23 (portail web) ──
+{
+  "id": "e96fea9d-487d-4570-8c2e-9ebc43703e55",
+  "code_trajet": "MOB-TRJ-20260423",
+  "date_trajet": "2026-04-23T00:00:00.000Z",
+  "heure_prise": "09:00:00",
+  "heure_arrivee": "10:00:00",
+  "type_vehicule": "TAXI",
+  "adresse_prise": "1 Rue Test, Montréal H0H 0H0",
+  "code_fixe": null,
+  "notes": "Trajet de test mobile",
+  "statut": "en_attente"
+}
+
+DONE 2026-04-23
+Exit: 0
+========================
