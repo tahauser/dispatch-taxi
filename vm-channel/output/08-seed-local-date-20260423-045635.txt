@@ -1,0 +1,30 @@
+=== VM-AGENT OUTPUT ===
+Script : 08-seed-local-date.sh
+Date   : 2026-04-23 04:56:35
+Branch : claude/mobile-scaffold-auth-route
+========================
+── Date UTC    : 2026-04-23 04:56 ──
+── Date locale : 2026-04-23 (America/Toronto) ──
+
+── DÉPLOIEMENT SEED.JS ──
+✓ seed.js à jour (supporte SEED_DATE)
+
+── SEED═════════�═══════════════════════════════════════════
+   SEED MOBILE TEST
+══════════════════════════════════Connexion PostgreSQL etablie
+Connexion PostgreSQL etablie
+✓ Chauffeur mobile-test (id: d72307ff-✓ Route 'Tournée Mobile Te✓ Route 'Tournée Mobile Test' — 3 stops pour 2026-04-23
+❌ there is no unique or exclusion constraint matching the ON CONFLICT specification
+
+── VÉRIF curl /api/r{
+  "nom": "Tournée Mobile Test",
+  "statut": "planifiee",
+  "date_planifiee": "2026-04-23T00:00:00.000Z",
+  "nb_stops": 0
+}
+
+✓ DONE — Rafraîchis le portail
+Exit: 0
+========================
+: 0
+========================

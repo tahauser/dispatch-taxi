@@ -1,0 +1,17 @@
+=== VM-AGENT OUTPUT ===
+Script : 03-seed-validate.sh
+Date   : 2026-04-22 23:45:48
+Branch : claude/mobile-scaffold-auth-route
+========================
+── 1. DÉPLOIEMENT SEED.JS ──
+✓ seed.js mis à jour (numero_chauffeur = MOB-001)
+
+── 2. SEED MOBILE-TEST ──
+═══════════════════════════════════════════
+   SEED MOBILE TEST
+═══════════════════════════════════════════
+
+Connexion PostgreSQL etablie
+❌ there is no unique or exclusion constraint matching the ON CONFLICT specification
+EXIT: 1
+========================

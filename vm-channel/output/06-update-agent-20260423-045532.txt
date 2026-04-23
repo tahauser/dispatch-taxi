@@ -1,0 +1,17 @@
+=== VM-AGENT OUTPUT ===
+Script : 06-update-agent.sh
+Date   : 2026-04-23 04:55:32
+Branch : main
+========================
+✓ vm-agent binary mis à jour
+✓ vm-agent service redémarré
+● vm-agent.service - VM GitHub Command Agent
+     Loaded: loaded (/etc/systemd/system/vm-agent.service; enabled; preset: enabled)
+     Active: active (running) since Thu 2026-04-23 04:55:32 UTC; 16ms ago
+   Main PID: 655160 (vm-agent)
+      Tasks: 4 (limit: 977)
+     Memory: 1.0M (peak: 1.0M)
+        CPU: 5ms
+     CGroup: /system.slice/vm-agent.service
+Exit: 0
+========================

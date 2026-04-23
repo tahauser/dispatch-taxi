@@ -327,7 +327,7 @@ async function run() {
 
   // Créer 2 routes (une par chauffeur parmi les 2 premiers disponibles)
   const chauffeurRows = await pool.query(
-    `SELECT id, nom, prenom FROM chauffeurs WHERE actif = true ORDER BY created_at LIMIT 2`
+    `SELECT id, nom, prenom FROM chauffeurs WHERE actif = true ORDER BY cree_le LIMIT 2`
   );
 
   const ROUTES_DEF = [
@@ -398,8 +398,121 @@ async function run() {
   process.exit(0);
 }
 
-run().catch(err => {
-  console.error('\n❌ Erreur seed:', err.message);
-  console.error(err.stack);
-  process.exit(1);
-});
+// ── Compte de test mobile (standalone) ───────────────────────────────────────
+
+async function seedMobileTest() {
+  const bcrypt = require('bcryptjs');
+  console.log('═══════════════════════════════════════════');
+  console.log('   SEED MOBILE TEST');
+  console.log('═══════════════════════════════════════════\n');
+
+  const passwordHash = await bcrypt.hash('MobileTest2026!', 10);
+
+  // Upsert chauffeur sans ON CONFLICT (pas de contrainte UNIQUE sur email)
+  const existing = await pool.query(
+    `SELECT id FROM chauffeurs WHERE email = $1`,
+    ['mobile-test@dispatchtaxi.local']
+  );
+  let mobileId;
+  if (existing.rows.length > 0) {
+    mobileId = existing.rows[0].id;
+    await pool.query(
+      `UPDATE chauffeurs SET mot_de_passe_hash = $1, actif = true WHERE id = $2`,
+      [passwordHash, mobileId]
+    );
+  } else {
+    const { rows } = await pool.query(`
+      INSERT INTO chauffeurs
+        (numero_chauffeur, nom, prenom, email, adresse_domicile,
+         type_vehicule, actif, mot_de_passe_hash, role)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      RETURNING id`,
+      [
+        'MOB-001', 'Test', 'Mobile',
+        'mobile-test@dispatchtaxi.local',
+        '1 Rue Test, Montréal H0H 0H0',
+        'TAXI', true, passwordHash, 'chauffeur',
+      ]
+    );
+    mobileId = rows[0].id;
+  }
+  console.log(`✓ Chauffeur mobile-test (id: ${mobileId})`);
+
+  // Route idempotente — SEED_DATE override pour tests multi-timezone
+  const today = process.env.SEED_DATE || new Date().toISOString().split('T')[0];
+  await pool.query(
+    `DELETE FROM routes WHERE chauffeur_id = $1 AND nom = 'Tournée Mobile Test'`,
+    [mobileId]
+  );
+
+  const routeRes = await pool.query(
+    `INSERT INTO routes (chauffeur_id, nom, date_planifiee)
+     VALUES ($1, 'Tournée Mobile Test', $2) RETURNING id`,
+    [mobileId, today]
+  );
+  const routeId = routeRes.rows[0].id;
+
+  const STOPS = [
+    { ordre: 1, adresse: '1000 Rue de la Gauchetière O, Montréal', lat: 45.5009, lng: -73.5694, offset: 0 },
+    { ordre: 2, adresse: '1500 Boul René-Lévesque O, Montréal',    lat: 45.4977, lng: -73.5786, offset: 30 },
+    { ordre: 3, adresse: '2000 Rue Saint-Catherine O, Montréal',   lat: 45.4933, lng: -73.5829, offset: 60 },
+  ];
+
+  for (const s of STOPS) {
+    const total = 8 * 60 + s.offset;
+    const hh = String(Math.floor(total / 60)).padStart(2, '0');
+    const mm = String(total % 60).padStart(2, '0');
+    await pool.query(
+      `INSERT INTO stops
+         (route_id, ordre, adresse, latitude, longitude, rayon_geofence_m, heure_arrivee_prevue)
+       VALUES ($1,$2,$3,$4,$5,50,$6)`,
+      [routeId, s.ordre, s.adresse, s.lat, s.lng, `${today}T${hh}:${mm}:00`]
+    );
+  }
+
+  console.log(`✓ Route 'Tournée Mobile Test' — ${STOPS.length} stops pour ${today}`);
+
+  // Trajet + affectation pour le portail web (système trajets/affectations)
+  // DELETE+INSERT (pas de contrainte UNIQUE garantie sur code_trajet en DB)
+  const codeTrajet = `MOB-TRJ-${today.replace(/-/g, '')}`;
+  await pool.query(
+    `DELETE FROM affectations WHERE trajet_id IN (SELECT id FROM trajets WHERE code_trajet = $1)`,
+    [codeTrajet]
+  );
+  await pool.query(`DELETE FROM trajets WHERE code_trajet = $1`, [codeTrajet]);
+  const { rows: trajetRows } = await pool.query(
+    `INSERT INTO trajets
+       (code_trajet, date_trajet, heure_prise, heure_arrivee,
+        type_vehicule, adresse_prise, adresse_arrivee, notes, statut)
+     VALUES ($1,$2,'09:00','10:00','TAXI',
+             '1 Rue Test, Montréal H0H 0H0',
+             'CHUM, 1000 Rue Saint-Denis, Montréal H2X 0C1',
+             'Trajet de test mobile','en_attente')
+     RETURNING id`,
+    [codeTrajet, today]
+  );
+  const trajetId = trajetRows[0].id;
+
+  await pool.query(
+    `INSERT INTO affectations (trajet_id, chauffeur_id, date_programme, proposee_par, statut)
+     VALUES ($1,$2,$3,'manuel','confirmee')`,
+    [trajetId, mobileId, today]
+  );
+  console.log(`✓ Trajet '${codeTrajet}' + affectation (portail web) pour ${today}`);
+
+  console.log(`✓ Email        : mobile-test@dispatchtaxi.local`);
+  console.log(`✓ Mot de passe : MobileTest2026!`);
+  console.log('═══════════════════════════════════════════\n');
+}
+
+if (process.env.MOBILE_ONLY === 'true') {
+  seedMobileTest()
+    .then(() => process.exit(0))
+    .catch(err => { console.error('❌', err.message); process.exit(1); });
+} else {
+  run().catch(err => {
+    console.error('\n❌ Erreur seed:', err.message);
+    console.error(err.stack);
+    process.exit(1);
+  });
+}

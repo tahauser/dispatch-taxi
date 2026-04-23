@@ -1,0 +1,29 @@
+=== VM-AGENT OUTPUT ===
+Script : 02-recover-and-validate.sh
+Date   : 2026-04-22 23:44:39
+Branch : claude/mobile-scaffold-auth-route
+========================
+── 1. MISE À JOUR VM-AGENT BINARY ──
+✓ /usr/local/bin/vm-agent mis à jour
+
+── 2. DÉPLOIEMENT SEED.JS ──
+✓ seed.js mis à jour
+
+── 3. PM2 STATUS ──
+┌────┬────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name               │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ [1m[36m0[39m[22m  │ dispatch-api       │ default     │ 1.0.0   │ [7m[1mfork[22m[27m    │ 609492   │ 20h    │ 47   │ [32m[1monline[22m[39m    │ 0%       │ 23.4mb   │ [1mazu… │ [90mdisabled[39m │
+│ [1m[36m1[39m[22m  │ facturation-api    │ default     │ 1.0.0   │ [7m[1mfork[22m[27m    │ 87109    │ 20D    │ 0    │ [32m[1monline[22m[39m    │ 0%       │ 19.9mb   │ [1mazu… │ [90mdisabled[39m │
+│ [1m[36m2[39m[22m  │ factures           │ default     │ 15.5.15 │ [7m[1mfork[22m[27m    │ 594694   │ 35h    │ 48   │ [32m[1monline[22m[39m    │ 0%       │ 59.3mb   │ [1mazu… │ [90mdisabled[39m │
+└────┴────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+
+── 4. SEED MOBILE-TEST ──
+═══════════════════════════════════════════
+   SEED MOBILE TEST
+═══════════════════════════════════════════
+
+Connexion PostgreSQL etablie
+❌ value too long for type character varying(10)
+EXIT: 1
+========================
