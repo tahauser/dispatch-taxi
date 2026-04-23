@@ -22,7 +22,7 @@ on:
         options: [all, ios, android]
 
 jobs:
-  # ── Vérification TypeScript ─────────────────────────────────────────────────
+  # ── 1. Vérification TypeScript ───────────────────────────────────────────────
   typecheck:
     name: TypeScript
     runs-on: ubuntu-latest
@@ -44,7 +44,43 @@ jobs:
       - name: Vérification des types
         run: npm run typecheck
 
-  # ── EAS Build (déclenché manuellement via workflow_dispatch) ────────────────
+  # ── 2. EAS Update — OTA automatique à chaque push ───────────────────────────
+  eas-update:
+    name: EAS Update (OTA · canal preview)
+    needs: typecheck
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Installer les dépendances
+        working-directory: mobile
+        run: npm ci
+
+      - name: Publier la mise à jour OTA
+        working-directory: mobile
+        env:
+          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+        run: |
+          eas update \
+            --channel preview \
+            --message "${{ github.event.head_commit.message }}" \
+            --non-interactive
+
+  # ── 3. EAS Build — déclenché manuellement via workflow_dispatch ──────────────
   eas-build:
     name: EAS Build · ${{ inputs.profile }} · ${{ inputs.platform }}
     needs: typecheck

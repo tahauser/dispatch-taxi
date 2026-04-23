@@ -8,6 +8,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'dispatchtaxi',
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+  updates: {
+    url: `https://u.expo.dev/${process.env.EXPO_PROJECT_ID ?? ''}`,
+  },
   icon: './assets/icon.png',
   splash: {
     image: './assets/splash-icon.png',
