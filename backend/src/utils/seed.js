@@ -471,6 +471,35 @@ async function seedMobileTest() {
   }
 
   console.log(`✓ Route 'Tournée Mobile Test' — ${STOPS.length} stops pour ${today}`);
+
+  // Trajet + affectation pour le portail web (système trajets/affectations)
+  const codeTrajet = `MOB-TRJ-${today.replace(/-/g, '')}`;
+  const { rows: trajetRows } = await pool.query(
+    `INSERT INTO trajets
+       (code_trajet, date_trajet, heure_prise, heure_arrivee,
+        type_vehicule, adresse_prise, adresse_arrivee, notes, statut)
+     VALUES ($1,$2,'09:00','10:00','TAXI',
+             '1 Rue Test, Montréal H0H 0H0',
+             'CHUM, 1000 Rue Saint-Denis, Montréal H2X 0C1',
+             'Trajet de test mobile','en_attente')
+     ON CONFLICT (code_trajet) DO UPDATE
+       SET date_trajet = EXCLUDED.date_trajet
+     RETURNING id`,
+    [codeTrajet, today]
+  );
+  const trajetId = trajetRows[0].id;
+
+  await pool.query(
+    `DELETE FROM affectations WHERE chauffeur_id = $1 AND date_programme = $2`,
+    [mobileId, today]
+  );
+  await pool.query(
+    `INSERT INTO affectations (trajet_id, chauffeur_id, date_programme, proposee_par, statut)
+     VALUES ($1,$2,$3,'manuel','confirmee')`,
+    [trajetId, mobileId, today]
+  );
+  console.log(`✓ Trajet '${codeTrajet}' + affectation (portail web) pour ${today}`);
+
   console.log(`✓ Email        : mobile-test@dispatchtaxi.local`);
   console.log(`✓ Mot de passe : MobileTest2026!`);
   console.log('═══════════════════════════════════════════\n');

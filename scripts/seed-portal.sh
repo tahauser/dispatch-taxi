@@ -25,8 +25,12 @@ az vm run-command invoke \
       -d "{\"email\":\"mobile-test@dispatchtaxi.local\",\"mot_de_passe\":\"MobileTest2026!\"}" \
       | jq -r .token)
     echo ""
-    echo "── API /routes?date=$LOCAL ──"
+    echo "── API /routes?date=$LOCAL (Mobile M1) ──"
     curl -s "http://localhost:3001/api/routes?date=$LOCAL" \
+      -H "Authorization: Bearer $TOKEN" | jq ".[0]"
+    echo ""
+    echo "── API /trajets?date=$LOCAL (portail web) ──"
+    curl -s "http://localhost:3001/api/trajets?date=$LOCAL" \
       -H "Authorization: Bearer $TOKEN" | jq ".[0]"
 
     # ── Config nginx complète ──
