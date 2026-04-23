@@ -438,8 +438,8 @@ async function seedMobileTest() {
   }
   console.log(`✓ Chauffeur mobile-test (id: ${mobileId})`);
 
-  // Route idempotente pour aujourd'hui
-  const today = new Date().toISOString().split('T')[0];
+  // Route idempotente — SEED_DATE override pour tests multi-timezone
+  const today = process.env.SEED_DATE || new Date().toISOString().split('T')[0];
   await pool.query(
     `DELETE FROM routes WHERE chauffeur_id = $1 AND nom = 'Tournée Mobile Test'`,
     [mobileId]
