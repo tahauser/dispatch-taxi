@@ -50,7 +50,10 @@ jobs:
     needs: typecheck
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' }}
-    continue-on-error: true   # Non-bloquant tant qu'aucun build preview n'est installé
+    continue-on-error: true
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -70,63 +73,6 @@ jobs:
       - name: Installer les dépendances
         working-directory: mobile
         run: npm ci
-
-      - name: Récupérer ou créer le Project ID EAS
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          PROJECT_ID=$(python3 << 'PYEOF'
-          import urllib.request, json, os, sys
-
-          token = os.environ['EXPO_TOKEN']
-          headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
-
-          def gql(query):
-              data = json.dumps({'query': query}).encode()
-              req = urllib.request.Request('https://api.expo.dev/graphql', data=data, headers=headers)
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      resp = json.loads(r.read())
-                      print(f'[graphql] {resp}', file=sys.stderr)
-                      return resp
-              except Exception as e:
-                  print(f'[graphql error] {e}', file=sys.stderr)
-                  return {}
-
-          # 1. Chercher le projet existant
-          r = gql('{ app { byFullName(fullName: "@tahauser/dispatch-taxi-mobile") { id } } }')
-          b = ((r.get('data') or {}).get('app') or {}).get('byFullName')
-          if b:
-              print(b['id'])
-              sys.exit(0)
-
-          # 2. Récupérer l'accountId de tahauser
-          r = gql('{ account { byName(accountName: "tahauser") { id } } }')
-          acct = ((r.get('data') or {}).get('account') or {}).get('byName')
-          if not acct:
-              print('[error] compte tahauser introuvable', file=sys.stderr)
-              sys.exit(1)
-
-          account_id = acct['id']
-          print(f'[info] accountId={account_id}', file=sys.stderr)
-
-          # 3. Créer le projet
-          mutation = f'mutation {{ app {{ createApp(appInput: {{ accountId: "{account_id}", projectName: "dispatch-taxi-mobile" }}) {{ id }} }} }}'
-          r = gql(mutation)
-          c = ((r.get('data') or {}).get('app') or {}).get('createApp')
-          if c:
-              print(c['id'])
-          else:
-              print('[error] création échouée', file=sys.stderr)
-              sys.exit(1)
-          PYEOF
-          )
-          if [ -z "$PROJECT_ID" ]; then
-            echo "::error::Impossible de récupérer ou créer le Project ID EAS"
-            exit 1
-          fi
-          echo "EXPO_PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-          echo "✅ Project ID: $PROJECT_ID"
 
       - name: Publier la mise à jour OTA
         working-directory: mobile
@@ -142,6 +88,9 @@ jobs:
     needs: typecheck
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' }}
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -162,62 +111,14 @@ jobs:
         working-directory: mobile
         run: npm ci
 
-      - name: Récupérer ou créer le Project ID EAS
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      - name: Vérifier EXPO_PROJECT_ID
         run: |
-          PROJECT_ID=$(python3 << 'PYEOF'
-          import urllib.request, json, os, sys
-
-          token = os.environ['EXPO_TOKEN']
-          headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
-
-          def gql(query):
-              data = json.dumps({'query': query}).encode()
-              req = urllib.request.Request('https://api.expo.dev/graphql', data=data, headers=headers)
-              try:
-                  with urllib.request.urlopen(req, timeout=30) as r:
-                      resp = json.loads(r.read())
-                      print(f'[graphql] {resp}', file=sys.stderr)
-                      return resp
-              except Exception as e:
-                  print(f'[graphql error] {e}', file=sys.stderr)
-                  return {}
-
-          # 1. Chercher le projet existant
-          r = gql('{ app { byFullName(fullName: "@tahauser/dispatch-taxi-mobile") { id } } }')
-          b = ((r.get('data') or {}).get('app') or {}).get('byFullName')
-          if b:
-              print(b['id'])
-              sys.exit(0)
-
-          # 2. Récupérer l'accountId de tahauser
-          r = gql('{ account { byName(accountName: "tahauser") { id } } }')
-          acct = ((r.get('data') or {}).get('account') or {}).get('byName')
-          if not acct:
-              print('[error] compte tahauser introuvable', file=sys.stderr)
-              sys.exit(1)
-
-          account_id = acct['id']
-          print(f'[info] accountId={account_id}', file=sys.stderr)
-
-          # 3. Créer le projet
-          mutation = f'mutation {{ app {{ createApp(appInput: {{ accountId: "{account_id}", projectName: "dispatch-taxi-mobile" }}) {{ id }} }} }}'
-          r = gql(mutation)
-          c = ((r.get('data') or {}).get('app') or {}).get('createApp')
-          if c:
-              print(c['id'])
-          else:
-              print('[error] création échouée', file=sys.stderr)
-              sys.exit(1)
-          PYEOF
-          )
-          if [ -z "$PROJECT_ID" ]; then
-            echo "::error::Impossible de récupérer ou créer le Project ID EAS"
+          if ! echo "$EXPO_PROJECT_ID" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+            echo "::error::EXPO_PROJECT_ID n'est pas un UUID valide."
+            echo "::error::Va sur expo.dev → ton projet → copie le Project ID → ajoute-le comme secret GitHub EXPO_PROJECT_ID"
             exit 1
           fi
-          echo "EXPO_PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-          echo "✅ Project ID: $PROJECT_ID"
+          echo "✅ Project ID: $EXPO_PROJECT_ID"
 
       - name: EAS Build
         working-directory: mobile
