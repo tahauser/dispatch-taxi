@@ -71,13 +71,18 @@ jobs:
         working-directory: mobile
         run: npm ci
 
-      - name: Récupérer le Project ID Expo
+      - name: Initialiser le projet EAS et récupérer le Project ID
+        working-directory: mobile
         run: |
-          PROJECT_ID=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.EXPO_TOKEN }}" \
-            "https://api.expo.dev/v2/projects?slug=dispatch-taxi-mobile&ownerUsername=tahauser" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])")
+          OUTPUT=$(eas init --non-interactive 2>&1)
+          echo "$OUTPUT"
+          PROJECT_ID=$(echo "$OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::Impossible d'extraire le Project ID depuis la sortie de eas init"
+            exit 1
+          fi
           echo "EXPO_PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+          echo "✅ Project ID: $PROJECT_ID"
 
       - name: Publier la mise à jour OTA
         working-directory: mobile
@@ -113,13 +118,18 @@ jobs:
         working-directory: mobile
         run: npm ci
 
-      - name: Récupérer le Project ID Expo
+      - name: Initialiser le projet EAS et récupérer le Project ID
+        working-directory: mobile
         run: |
-          PROJECT_ID=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.EXPO_TOKEN }}" \
-            "https://api.expo.dev/v2/projects?slug=dispatch-taxi-mobile&ownerUsername=tahauser" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])")
+          OUTPUT=$(eas init --non-interactive 2>&1)
+          echo "$OUTPUT"
+          PROJECT_ID=$(echo "$OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::Impossible d'extraire le Project ID depuis la sortie de eas init"
+            exit 1
+          fi
           echo "EXPO_PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+          echo "✅ Project ID: $PROJECT_ID"
 
       - name: EAS Build
         working-directory: mobile
