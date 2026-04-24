@@ -71,10 +71,16 @@ jobs:
         working-directory: mobile
         run: npm ci
 
+      - name: Récupérer le Project ID Expo
+        run: |
+          PROJECT_ID=$(curl -s \
+            -H "Authorization: Bearer ${{ secrets.EXPO_TOKEN }}" \
+            "https://api.expo.dev/v2/projects?slug=dispatch-taxi-mobile&ownerUsername=tahauser" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])")
+          echo "EXPO_PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+
       - name: Publier la mise à jour OTA
         working-directory: mobile
-        env:
-          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
         run: |
           eas update \
             --channel preview \
@@ -107,10 +113,16 @@ jobs:
         working-directory: mobile
         run: npm ci
 
+      - name: Récupérer le Project ID Expo
+        run: |
+          PROJECT_ID=$(curl -s \
+            -H "Authorization: Bearer ${{ secrets.EXPO_TOKEN }}" \
+            "https://api.expo.dev/v2/projects?slug=dispatch-taxi-mobile&ownerUsername=tahauser" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])")
+          echo "EXPO_PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
+
       - name: EAS Build
         working-directory: mobile
-        env:
-          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
         run: |
           eas build \
             --platform ${{ inputs.platform }} \
