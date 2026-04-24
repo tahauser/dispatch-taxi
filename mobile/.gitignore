@@ -39,4 +39,4 @@ yarn-error.*
 
 # generated native folders
 /ios
-/android
+# android/ committé intentionnellement pour contrôler les fixes Gradle (voir settings.gradle)
