@@ -1,0 +1,130 @@
+name: Mobile
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['mobile/**']
+  pull_request:
+    paths: ['mobile/**']
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options: [development, preview, production]
+      platform:
+        description: 'Plateforme cible'
+        required: true
+        default: 'all'
+        type: choice
+        options: [all, ios, android]
+
+jobs:
+  # ── 1. Vérification TypeScript ───────────────────────────────────────────────
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérification des types
+        run: npm run typecheck
+
+  # ── 2. EAS Update — OTA automatique à chaque push ───────────────────────────
+  eas-update:
+    name: EAS Update (OTA · canal preview)
+    needs: typecheck
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    continue-on-error: true
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Installer les dépendances
+        working-directory: mobile
+        run: npm ci
+
+      - name: Publier la mise à jour OTA
+        working-directory: mobile
+        run: |
+          eas update \
+            --channel preview \
+            --message "${{ github.event.head_commit.message }}" \
+            --non-interactive
+
+  # ── 3. EAS Build — déclenché manuellement via workflow_dispatch ──────────────
+  eas-build:
+    name: EAS Build · ${{ inputs.profile }} · ${{ inputs.platform }}
+    needs: typecheck
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Installer les dépendances
+        working-directory: mobile
+        run: npm ci
+
+      - name: Vérifier EXPO_PROJECT_ID
+        run: |
+          if ! echo "$EXPO_PROJECT_ID" | grep -qE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+            echo "::error::EXPO_PROJECT_ID n'est pas un UUID valide."
+            echo "::error::Va sur expo.dev → ton projet → copie le Project ID → ajoute-le comme secret GitHub EXPO_PROJECT_ID"
+            exit 1
+          fi
+          echo "✅ Project ID: $EXPO_PROJECT_ID"
+
+      - name: EAS Build
+        working-directory: mobile
+        run: |
+          eas build \
+            --platform ${{ inputs.platform }} \
+            --profile ${{ inputs.profile }} \
+            --non-interactive \
+            --no-wait
