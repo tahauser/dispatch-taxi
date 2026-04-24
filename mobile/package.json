@@ -11,7 +11,8 @@
     "mobile:android": "expo start --android",
     "mobile:ios": "expo start --ios",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/patch-gradle-plugin.js"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
