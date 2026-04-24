@@ -57,7 +57,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     // FIXME: Retirer usesCleartextTraffic quand le backend passera en HTTPS
-    ['expo-build-properties', { android: { usesCleartextTraffic: true } }],
+    ['expo-build-properties', { android: { usesCleartextTraffic: true, kotlinVersion: '2.0.21' } }],
   ],
   experiments: {
     typedRoutes: true,
