@@ -71,14 +71,34 @@ jobs:
         working-directory: mobile
         run: npm ci
 
-      - name: Initialiser le projet EAS et récupérer le Project ID
-        working-directory: mobile
+      - name: Récupérer ou créer le Project ID EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          OUTPUT=$(eas init --non-interactive 2>&1)
-          echo "$OUTPUT"
-          PROJECT_ID=$(echo "$OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          echo "Recherche du projet @tahauser/dispatch-taxi-mobile..."
+          QUERY_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $EXPO_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"{ app { byFullName(fullName: \"@tahauser/dispatch-taxi-mobile\") { id } } }"}' \
+            https://api.expo.dev/graphql)
+          echo "Query: $QUERY_RESPONSE"
+          PROJECT_ID=$(echo "$QUERY_RESPONSE" | python3 -c \
+            "import sys,json; d=json.load(sys.stdin); b=((d.get('data') or {}).get('app') or {}).get('byFullName'); print(b['id'] if b else '')" \
+            2>/dev/null || true)
           if [ -z "$PROJECT_ID" ]; then
-            echo "::error::Impossible d'extraire le Project ID depuis la sortie de eas init"
+            echo "Projet introuvable, création..."
+            CREATE_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer $EXPO_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"query":"mutation { createApp(appInput: { accountName: \"tahauser\", projectName: \"dispatch-taxi-mobile\", privacyPolicy: PUBLIC }) { id } }"}' \
+              https://api.expo.dev/graphql)
+            echo "Create: $CREATE_RESPONSE"
+            PROJECT_ID=$(echo "$CREATE_RESPONSE" | python3 -c \
+              "import sys,json; d=json.load(sys.stdin); c=(d.get('data') or {}).get('createApp'); print(c['id'] if c else '')" \
+              2>/dev/null || true)
+          fi
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::Impossible de récupérer ou créer le Project ID EAS"
             exit 1
           fi
           echo "EXPO_PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
@@ -118,14 +138,34 @@ jobs:
         working-directory: mobile
         run: npm ci
 
-      - name: Initialiser le projet EAS et récupérer le Project ID
-        working-directory: mobile
+      - name: Récupérer ou créer le Project ID EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          OUTPUT=$(eas init --non-interactive 2>&1)
-          echo "$OUTPUT"
-          PROJECT_ID=$(echo "$OUTPUT" | grep -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' | head -1)
+          echo "Recherche du projet @tahauser/dispatch-taxi-mobile..."
+          QUERY_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $EXPO_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"{ app { byFullName(fullName: \"@tahauser/dispatch-taxi-mobile\") { id } } }"}' \
+            https://api.expo.dev/graphql)
+          echo "Query: $QUERY_RESPONSE"
+          PROJECT_ID=$(echo "$QUERY_RESPONSE" | python3 -c \
+            "import sys,json; d=json.load(sys.stdin); b=((d.get('data') or {}).get('app') or {}).get('byFullName'); print(b['id'] if b else '')" \
+            2>/dev/null || true)
           if [ -z "$PROJECT_ID" ]; then
-            echo "::error::Impossible d'extraire le Project ID depuis la sortie de eas init"
+            echo "Projet introuvable, création..."
+            CREATE_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: Bearer $EXPO_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"query":"mutation { createApp(appInput: { accountName: \"tahauser\", projectName: \"dispatch-taxi-mobile\", privacyPolicy: PUBLIC }) { id } }"}' \
+              https://api.expo.dev/graphql)
+            echo "Create: $CREATE_RESPONSE"
+            PROJECT_ID=$(echo "$CREATE_RESPONSE" | python3 -c \
+              "import sys,json; d=json.load(sys.stdin); c=(d.get('data') or {}).get('createApp'); print(c['id'] if c else '')" \
+              2>/dev/null || true)
+          fi
+          if [ -z "$PROJECT_ID" ]; then
+            echo "::error::Impossible de récupérer ou créer le Project ID EAS"
             exit 1
           fi
           echo "EXPO_PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
