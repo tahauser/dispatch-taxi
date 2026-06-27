@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const jwt        = require('jsonwebtoken');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
@@ -8,6 +9,8 @@ const transporter = nodemailer.createTransport({
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
 });
 
+const APP_URL = process.env.APP_URL || 'http://dispatch-taxi.canadacentral.cloudapp.azure.com';
+
 function fmtHeure(h) { return String(h||'').substring(0,5); }
 function fmtDate(dateStr) {
   const jours = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
@@ -16,17 +19,18 @@ function fmtDate(dateStr) {
   return `${jours[d.getDay()]} ${d.getDate()} ${mois[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+function genererTokenConsultation(chauffeur_id, date_programme) {
+  return jwt.sign(
+    { chauffeur_id, date_programme },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+}
+
 async function envoyerProgramme(chauffeur, date) {
-  const dateF = fmtDate(date);
-  const lignes = chauffeur.trajets.map(t => `
-    <tr style="border-bottom:1px solid #e0e0e0;">
-      <td style="padding:10px;font-weight:bold;color:#1F4E79;">${t.code_trajet}</td>
-      <td style="padding:10px;text-align:center;">${fmtHeure(t.heure_prise)}</td>
-      <td style="padding:10px;text-align:center;">${fmtHeure(t.heure_arrivee)}</td>
-      <td style="padding:10px;">${t.type_vehicule||'TAXI'}</td>
-      <td style="padding:10px;">${t.adresse_prise}</td>
-      <td style="padding:10px;color:#666;font-style:italic;">${t.notes||''}</td>
-    </tr>`).join('');
+  const dateF  = fmtDate(date);
+  const token  = genererTokenConsultation(chauffeur.chauffeur_id, date);
+  const lien   = `${APP_URL}/consultation/${token}`;
 
   const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;">
     <div style="background:#1F4E79;padding:20px;border-radius:8px 8px 0 0;">
@@ -35,30 +39,33 @@ async function envoyerProgramme(chauffeur, date) {
     </div>
     <div style="background:#f8f9fa;padding:20px;border-left:4px solid #1F4E79;">
       <p>Bonjour <strong>${chauffeur.prenom} ${chauffeur.nom}</strong>,</p>
-      <p>Voici votre programme pour le <strong>${dateF}</strong> — <strong>${chauffeur.trajets.length} trajet(s)</strong>.</p>
+      <p>Votre programme pour le <strong>${dateF}</strong> est disponible — <strong>${chauffeur.trajets.length} trajet(s)</strong> vous ont été assignés.</p>
+      <p>Cliquez sur le bouton ci-dessous pour consulter votre programme complet :</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${lien}"
+           style="background:#1F4E79;color:white;padding:14px 32px;border-radius:8px;
+                  text-decoration:none;font-size:16px;font-weight:bold;display:inline-block;">
+          📋 Consulter mon programme du ${dateF}
+        </a>
+      </div>
+      <p style="color:#888;font-size:13px;">
+        Ce lien est valable 7 jours et vous est réservé — ne le partagez pas.<br>
+        Si le bouton ne fonctionne pas, copiez ce lien : <br>
+        <span style="word-break:break-all;color:#1F4E79;">${lien}</span>
+      </p>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:20px;">
-      <thead><tr style="background:#1F4E79;color:white;">
-        <th style="padding:12px;text-align:left;">Trajet</th>
-        <th style="padding:12px;">Prise</th><th style="padding:12px;">Fin</th>
-        <th style="padding:12px;text-align:left;">Vehicule</th>
-        <th style="padding:12px;text-align:left;">Adresse de prise</th>
-        <th style="padding:12px;text-align:left;">Notes</th>
-      </tr></thead>
-      <tbody>${lignes}</tbody>
-    </table>
     <div style="background:#f8f9fa;padding:15px;margin-top:20px;font-size:12px;color:#666;">
-      <p style="margin:0;">Message automatique - systeme de dispatch.</p>
+      <p style="margin:0;">Message automatique - système de dispatch.</p>
     </div>
   </body></html>`;
 
   await transporter.sendMail({
     from: `"Dispatch Taxi" <${process.env.EMAIL_FROM}>`,
     to: chauffeur.email,
-    subject: `Votre programme du ${dateF} - ${chauffeur.prenom} ${chauffeur.nom}`,
+    subject: `Votre programme du ${dateF} — ${chauffeur.prenom} ${chauffeur.nom}`,
     html
   });
-  console.log(`Email envoye a ${chauffeur.email}`);
+  console.log(`Email programme envoye a ${chauffeur.email}`);
 }
 
 async function envoyerAucunTrajet(chauffeur, date) {
@@ -70,18 +77,18 @@ async function envoyerAucunTrajet(chauffeur, date) {
     </div>
     <div style="background:#fff8e1;padding:20px;border-left:4px solid #FFA000;">
       <p>Bonjour <strong>${chauffeur.prenom} ${chauffeur.nom}</strong>,</p>
-      <p>Vous avez indique vos disponibilites pour le <strong>${dateF}</strong>.</p>
-      <p style="color:#E65100;font-weight:bold;">Aucun trajet ne vous a ete assigne pour cette journee.</p>
-      <p>Merci de votre disponibilite.</p>
+      <p>Vous avez indiqué vos disponibilités pour le <strong>${dateF}</strong>.</p>
+      <p style="color:#E65100;font-weight:bold;">Aucun trajet ne vous a été assigné pour cette journée.</p>
+      <p>Merci de votre disponibilité.</p>
     </div>
     <div style="background:#f8f9fa;padding:15px;margin-top:20px;font-size:12px;color:#666;">
-      <p style="margin:0;">Message automatique - systeme de dispatch.</p>
+      <p style="margin:0;">Message automatique - système de dispatch.</p>
     </div>
   </body></html>`;
   await transporter.sendMail({
     from: `"Dispatch Taxi" <${process.env.EMAIL_FROM}>`,
     to: chauffeur.email,
-    subject: `Programme du ${dateF} - Aucun trajet assigne`,
+    subject: `Programme du ${dateF} - Aucun trajet assigné`,
     html
   });
   console.log(`Email aucun trajet envoye a ${chauffeur.email}`);
@@ -96,21 +103,21 @@ async function envoyerAucuneDisponibilite(chauffeur, date) {
     </div>
     <div style="background:#fce4ec;padding:20px;border-left:4px solid #e53935;">
       <p>Bonjour <strong>${chauffeur.prenom} ${chauffeur.nom}</strong>,</p>
-      <p>Nous n'avons pas recu vos disponibilites pour le <strong>${dateF}</strong>.</p>
-      <p style="color:#b71c1c;font-weight:bold;">Aucun trajet ne vous a donc ete assigne pour cette journee.</p>
-      <p>Pour les prochaines journees, merci de saisir vos disponibilites avant la deadline.</p>
+      <p>Nous n'avons pas reçu vos disponibilités pour le <strong>${dateF}</strong>.</p>
+      <p style="color:#b71c1c;font-weight:bold;">Aucun trajet ne vous a donc été assigné pour cette journée.</p>
+      <p>Pour les prochaines journées, merci de saisir vos disponibilités avant la deadline.</p>
     </div>
     <div style="background:#f8f9fa;padding:15px;margin-top:20px;font-size:12px;color:#666;">
-      <p style="margin:0;">Message automatique - systeme de dispatch.</p>
+      <p style="margin:0;">Message automatique - système de dispatch.</p>
     </div>
   </body></html>`;
   await transporter.sendMail({
     from: `"Dispatch Taxi" <${process.env.EMAIL_FROM}>`,
     to: chauffeur.email,
-    subject: `Programme du ${dateF} - Aucune disponibilite recue`,
+    subject: `Programme du ${dateF} - Aucune disponibilité reçue`,
     html
   });
   console.log(`Email aucune dispo envoye a ${chauffeur.email}`);
 }
 
-module.exports = { envoyerProgramme, envoyerAucunTrajet, envoyerAucuneDisponibilite };
+module.exports = { envoyerProgramme, envoyerAucunTrajet, envoyerAucuneDisponibilite, genererTokenConsultation };

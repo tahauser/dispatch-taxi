@@ -1,5 +1,7 @@
 import CalendrierDispatch from './CalendrierDispatch';
 import DashboardMobile from './DashboardMobile';
+import GestionChauffeurs from './GestionChauffeurs';
+import AccusesReception from './AccusesReception';
 import useIsMobile from './hooks/useIsMobile';
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
@@ -29,11 +31,11 @@ function fmtStatut(s) { return STATUT_LABEL[s] || s; }
 export default function Dashboard({ user, onLogout }) {
   const isMobile = useIsMobile();
   if (isMobile) return <DashboardMobile user={user} onLogout={onLogout} />;
+
   const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
   const [trajets, setTrajets]         = useState([]);
   const [affectations, setAffectations] = useState([]);
   const [dispos, setDispos]           = useState([]);
-  const [chauffeurs, setChauffeurs]   = useState([]);
   const [onglet, setOnglet] = useState('calendrier');
   const [loading, setLoading]         = useState(false);
   const [message, setMessage]         = useState('');
@@ -42,7 +44,13 @@ export default function Dashboard({ user, onLogout }) {
   const [dejaPropose, setDejaPropose] = useState(false);
   const [dejaEnvoye, setDejaEnvoye] = useState(false);
 
-  useEffect(() => { chargerDonnees(); }, [date]);
+  // Import Excel
+  const fileInputRef = useRef(null);
+  const [importLoading, setImportLoading] = useState(false);
+
+  useEffect(() => {
+    if (['calendrier','affectations','trajets','disponibilites'].includes(onglet)) chargerDonnees();
+  }, [date, onglet]);
 
   async function chargerDonnees() {
     setLoading(true);
@@ -101,6 +109,7 @@ export default function Dashboard({ user, onLogout }) {
     } catch (err) { setMessage(err.response?.data?.message || 'Erreur'); }
     setLoading(false);
   }
+
   async function envoyerIndividuel(chauffeurId) {
     try {
       await api.post(`/affectations/envoyer/${chauffeurId}?date=${date}`);
@@ -110,6 +119,7 @@ export default function Dashboard({ user, onLogout }) {
       await chargerDonnees();
     } catch (err) { setMessage('Erreur envoi'); }
   }
+
   async function envoyerProgrammes() {
     if (!confirm('Envoyer les programmes par email a tous les chauffeurs?')) return;
     setLoading(true); setMessage('');
@@ -124,9 +134,41 @@ export default function Dashboard({ user, onLogout }) {
     setLoading(false);
   }
 
+  async function handleImportExcel(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setImportLoading(true); setMessage('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/trajets/import-excel', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setMessage(res.data.message);
+      if (msgTimer.current) clearTimeout(msgTimer.current);
+      msgTimer.current = setTimeout(() => setMessage(''), 10000);
+      await chargerDonnees();
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Erreur d'import");
+    }
+    setImportLoading(false);
+  }
+
   const nbAffectes    = affectations.length;
   const nbNonAffectes = trajets.filter(t => !affectations.find(a => a.trajet_id === t.id)).length;
   const nbDispos      = [...new Set(dispos.map(d => d.chauffeur_id))].length;
+
+  const onglets = [
+    { id:'calendrier',     label:'📅 Calendrier' },
+    { id:'affectations',   label:'Affectations' },
+    { id:'trajets',        label:'Trajets' },
+    { id:'disponibilites', label:'Disponibilités' },
+    { id:'chauffeurs',     label:'Chauffeurs' },
+    { id:'accuses',        label:'Accusés de réception' },
+  ];
+
+  const dateOnglets = ['calendrier','affectations','trajets','disponibilites'];
 
   return (
     <div style={{ minHeight:'100vh', background:'#f0f4f8', fontFamily:'Arial,sans-serif' }}>
@@ -136,14 +178,15 @@ export default function Dashboard({ user, onLogout }) {
           <div style={{ background:'white', padding:'32px 48px', borderRadius:'12px',
             textAlign:'center', boxShadow:'0 8px 32px rgba(0,0,0,0.3)' }}>
             <div style={{ fontSize:'32px', marginBottom:'12px' }}>⏳</div>
-            <div style={{ fontSize:'16px', fontWeight:'600', color:'#1F4E79' }}>Envoi en cours...</div>
+            <div style={{ fontSize:'16px', fontWeight:'600', color:'#1F4E79' }}>En cours...</div>
             <div style={{ fontSize:'13px', color:'#888', marginTop:'8px' }}>Veuillez patienter</div>
           </div>
         </div>
       )}
+
       {/* Header */}
-      <div style={{ background:BLEU, paddingTop:'calc(16px + env(safe-area-inset-top))', paddingBottom:'16px', paddingLeft:'24px', paddingRight:'24px', display:'flex',
-        justifyContent:'space-between', alignItems:'center' }}>
+      <div style={{ background:BLEU, paddingTop:'calc(16px + env(safe-area-inset-top))', paddingBottom:'16px',
+        paddingLeft:'24px', paddingRight:'24px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <h1 style={{ color:'white', margin:0, fontSize:'20px' }}>Dispatch Taxi</h1>
         <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
           <span style={{ color:BLEU_CLAIR, fontSize:'14px' }}>{user.prenom} {user.nom}</span>
@@ -156,59 +199,80 @@ export default function Dashboard({ user, onLogout }) {
       </div>
 
       <div style={{ padding:'16px 8px', maxWidth:'100%', margin:'0 auto' }}>
-        {/* Selecteur date + actions */}
-        <div style={{ display:'flex', gap:'12px', alignItems:'center', marginBottom:'24px', flexWrap:'wrap' }}>
-          <button onClick={() => { const d=new Date(date); d.setDate(d.getDate()-1); setDate(d.toISOString().split('T')[0]); }}
-            style={{ padding:'8px 12px', background:'white', border:'1px solid #ddd', borderRadius:'6px', cursor:'pointer', fontSize:'18px' }}>‹</button>
-          <input type="date" value={date} onChange={e => { if (e.target.value) setDate(e.target.value); else setDate(new Date().toISOString().split('T')[0]); }}
-            style={{ padding:'8px 12px', border:'1px solid #ddd', borderRadius:'6px',
-              fontSize:'14px', background:'white' }} />
-          <button onClick={() => { const d=new Date(date); d.setDate(d.getDate()+1); setDate(d.toISOString().split('T')[0]); }}
-            style={{ padding:'8px 12px', background:'white', border:'1px solid #ddd', borderRadius:'6px', cursor:'pointer', fontSize:'18px' }}>›</button>
-          <button onClick={proposerAffectations} disabled={loading || dejaPropose || trajets.length === 0}
-            style={{ padding:'8px 16px', background: (dejaPropose || trajets.length === 0) ? '#e0e0e0' : '#2E75B6', color: (dejaPropose || trajets.length === 0) ? '#999' : 'white', border: (dejaPropose || trajets.length === 0) ? '1px solid #ccc' : 'none',
-              borderRadius:'6px', cursor: (dejaPropose || trajets.length === 0) ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
-            {loading ? '...' : 'Proposer affectations'}
-          </button>
-          <button onClick={reinitialiserAffectations} disabled={loading || !dejaPropose}
-            style={{ padding:'8px 16px', background: dejaPropose ? '#c62828' : '#e0e0e0', color: dejaPropose ? 'white' : '#999', border: dejaPropose ? 'none' : '1px solid #ccc',
-              borderRadius:'6px', cursor: dejaPropose ? 'pointer' : 'not-allowed', fontWeight:'500' }}>
-            Réinitialiser
-          </button>
-          <button onClick={envoyerProgrammes} disabled={loading || nbAffectes === 0 || dejaEnvoye}
-            style={{ padding:'8px 16px', background: (dejaEnvoye || nbAffectes === 0) ? '#e0e0e0' : '#375623',
-              color: (dejaEnvoye || nbAffectes === 0) ? '#999' : 'white', border: (dejaEnvoye || nbAffectes === 0) ? '1px solid #ccc' : 'none',
-              borderRadius:'6px', cursor: (dejaEnvoye || nbAffectes === 0) ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
-            Envoyer programmes
-          </button>
-          <button onClick={renvoyerProgrammes} disabled={loading || !dejaEnvoye}
-            style={{ padding:'8px 16px', background: dejaEnvoye ? '#5c6bc0' : '#e0e0e0',
-              color: dejaEnvoye ? 'white' : '#999', border:'none',
-              borderRadius:'6px', cursor: dejaEnvoye ? 'pointer' : 'not-allowed',
-              fontWeight:'500' }}>
-            🔄 Renvoyer tout
-          </button>
-          <button onClick={chargerDonnees}
-            style={{ padding:'8px 16px', background:'white', color:BLEU, border:'1px solid #ddd',
-              borderRadius:'6px', cursor:'pointer' }}>
-            Actualiser
-          </button>
-        </div>
 
-        {message && <div style={{ background: message.includes('Erreur') ? '#ffebee' : '#e8f5e9',
-          color: message.includes('Erreur') ? '#c62828' : '#2e7d32',
-          padding:'12px 16px', borderRadius:'8px', marginBottom:'16px' }}>{message}</div>}
+        {/* Barre d'actions — seulement sur les onglets date */}
+        {dateOnglets.includes(onglet) && (
+          <div style={{ display:'flex', gap:'12px', alignItems:'center', marginBottom:'24px', flexWrap:'wrap' }}>
+            <button onClick={() => { const d=new Date(date); d.setDate(d.getDate()-1); setDate(d.toISOString().split('T')[0]); }}
+              style={{ padding:'8px 12px', background:'white', border:'1px solid #ddd', borderRadius:'6px', cursor:'pointer', fontSize:'18px' }}>‹</button>
+            <input type="date" value={date} onChange={e => { if (e.target.value) setDate(e.target.value); else setDate(new Date().toISOString().split('T')[0]); }}
+              style={{ padding:'8px 12px', border:'1px solid #ddd', borderRadius:'6px', fontSize:'14px', background:'white' }} />
+            <button onClick={() => { const d=new Date(date); d.setDate(d.getDate()+1); setDate(d.toISOString().split('T')[0]); }}
+              style={{ padding:'8px 12px', background:'white', border:'1px solid #ddd', borderRadius:'6px', cursor:'pointer', fontSize:'18px' }}>›</button>
 
+            <button onClick={proposerAffectations} disabled={loading || dejaPropose || trajets.length === 0}
+              style={{ padding:'8px 16px', background: (dejaPropose || trajets.length === 0) ? '#e0e0e0' : '#2E75B6',
+                color: (dejaPropose || trajets.length === 0) ? '#999' : 'white',
+                border: (dejaPropose || trajets.length === 0) ? '1px solid #ccc' : 'none',
+                borderRadius:'6px', cursor: (dejaPropose || trajets.length === 0) ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
+              {loading ? '...' : 'Proposer affectations'}
+            </button>
+            <button onClick={reinitialiserAffectations} disabled={loading || !dejaPropose}
+              style={{ padding:'8px 16px', background: dejaPropose ? '#c62828' : '#e0e0e0',
+                color: dejaPropose ? 'white' : '#999', border: dejaPropose ? 'none' : '1px solid #ccc',
+                borderRadius:'6px', cursor: dejaPropose ? 'pointer' : 'not-allowed', fontWeight:'500' }}>
+              Réinitialiser
+            </button>
+            <button onClick={envoyerProgrammes} disabled={loading || nbAffectes === 0 || dejaEnvoye}
+              style={{ padding:'8px 16px', background: (dejaEnvoye || nbAffectes === 0) ? '#e0e0e0' : '#375623',
+                color: (dejaEnvoye || nbAffectes === 0) ? '#999' : 'white',
+                border: (dejaEnvoye || nbAffectes === 0) ? '1px solid #ccc' : 'none',
+                borderRadius:'6px', cursor: (dejaEnvoye || nbAffectes === 0) ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
+              Envoyer programmes
+            </button>
+            <button onClick={renvoyerProgrammes} disabled={loading || !dejaEnvoye}
+              style={{ padding:'8px 16px', background: dejaEnvoye ? '#5c6bc0' : '#e0e0e0',
+                color: dejaEnvoye ? 'white' : '#999', border:'none',
+                borderRadius:'6px', cursor: dejaEnvoye ? 'pointer' : 'not-allowed', fontWeight:'500' }}>
+              🔄 Renvoyer tout
+            </button>
+
+            {/* Import Excel EXO */}
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv"
+              style={{ display:'none' }} onChange={handleImportExcel} />
+            <button onClick={() => fileInputRef.current?.click()} disabled={importLoading}
+              style={{ padding:'8px 16px', background: importLoading ? '#e0e0e0' : '#E65100',
+                color: importLoading ? '#999' : 'white', border:'none',
+                borderRadius:'6px', cursor: importLoading ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
+              {importLoading ? '⏳ Import...' : '📥 Importer Excel EXO'}
+            </button>
+
+            <button onClick={chargerDonnees}
+              style={{ padding:'8px 16px', background:'white', color:BLEU, border:'1px solid #ddd',
+                borderRadius:'6px', cursor:'pointer' }}>
+              Actualiser
+            </button>
+          </div>
+        )}
+
+        {message && (
+          <div style={{ background: message.toLowerCase().includes('erreur') ? '#ffebee' : '#e8f5e9',
+            color: message.toLowerCase().includes('erreur') ? '#c62828' : '#2e7d32',
+            padding:'12px 16px', borderRadius:'8px', marginBottom:'16px',
+            whiteSpace:'pre-wrap', fontSize:'14px' }}>
+            {message}
+          </div>
+        )}
 
         {/* Onglets */}
-        <div style={{ display:'flex', gap:'4px', marginBottom:'16px' }}>
-          {['calendrier','affectations','trajets','disponibilites'].map(o => (
-            <button key={o} onClick={() => { setOnglet(o); if (o === 'affectations') chargerDonnees(); }}
+        <div style={{ display:'flex', gap:'4px', marginBottom:'16px', flexWrap:'wrap' }}>
+          {onglets.map(o => (
+            <button key={o.id} onClick={() => setOnglet(o.id)}
               style={{ padding:'8px 20px', border:'none', borderRadius:'6px 6px 0 0',
-                cursor:'pointer', fontWeight: onglet===o ? '600' : '400',
-                background: onglet===o ? 'white' : '#e0e9f3',
-                color: onglet===o ? BLEU : '#555', fontSize:'14px' }}>
-              {o==='calendrier'?'📅 Calendrier':o==='affectations'?'Affectations':o==='trajets'?'Trajets':'Disponibilités'}
+                cursor:'pointer', fontWeight: onglet===o.id ? '600' : '400',
+                background: onglet===o.id ? 'white' : '#e0e9f3',
+                color: onglet===o.id ? BLEU : '#555', fontSize:'14px' }}>
+              {o.label}
             </button>
           ))}
         </div>
@@ -217,9 +281,10 @@ export default function Dashboard({ user, onLogout }) {
         <div style={{ background:'white', borderRadius:'0 10px 10px 10px',
           boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
 
-          {onglet==='calendrier' && <CalendrierDispatch onEnvoiIndividuel={envoyerIndividuel} onRefresh={chargerDonnees} date={date} refreshKey={refreshKey} />}
+          {onglet==='calendrier' && (
+            <CalendrierDispatch onEnvoiIndividuel={envoyerIndividuel} onRefresh={chargerDonnees} date={date} refreshKey={refreshKey} />
+          )}
 
-          {/* Tableau affectations */}
           {onglet==='affectations' && (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
@@ -235,8 +300,7 @@ export default function Dashboard({ user, onLogout }) {
                     Aucune affectation — cliquez sur "Proposer affectations"
                   </td></tr>
                 ) : affectations.map((a,i) => (
-                  <tr key={a.id} style={{ background: i%2===0 ? '#fafafa' : 'white',
-                    borderBottom:'1px solid #eee' }}>
+                  <tr key={a.id} style={{ background: i%2===0 ? '#fafafa' : 'white', borderBottom:'1px solid #eee' }}>
                     <td style={{ padding:'12px 16px', fontWeight:'600', color:BLEU }}>{a.code_trajet}</td>
                     <td style={{ padding:'12px 16px' }}>{fmt(a.heure_prise)}</td>
                     <td style={{ padding:'12px 16px' }}>{fmt(a.heure_arrivee)}</td>
@@ -246,10 +310,8 @@ export default function Dashboard({ user, onLogout }) {
                     <td style={{ padding:'12px 16px' }}>{a.prenom} {a.nom} ({a.numero_chauffeur})</td>
                     <td style={{ padding:'12px 16px' }}>
                       <span style={{ padding:'3px 10px', borderRadius:'12px', fontSize:'12px',
-                        background: a.statut==='envoyee' ? '#e8f5e9' :
-                          a.statut==='proposee' ? '#fff8e1' : '#f3f4f6',
-                        color: a.statut==='envoyee' ? '#2e7d32' :
-                          a.statut==='proposee' ? '#f57f17' : '#555' }}>
+                        background: a.statut==='envoyee' ? '#e8f5e9' : a.statut==='proposee' ? '#fff8e1' : '#f3f4f6',
+                        color: a.statut==='envoyee' ? '#2e7d32' : a.statut==='proposee' ? '#f57f17' : '#555' }}>
                         {fmtStatut(a.statut)}
                       </span>
                     </td>
@@ -259,7 +321,6 @@ export default function Dashboard({ user, onLogout }) {
             </table>
           )}
 
-          {/* Tableau trajets */}
           {onglet==='trajets' && (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
@@ -271,8 +332,7 @@ export default function Dashboard({ user, onLogout }) {
               </thead>
               <tbody>
                 {trajets.map((t,i) => (
-                  <tr key={t.id} style={{ background: i%2===0 ? '#fafafa' : 'white',
-                    borderBottom:'1px solid #eee' }}>
+                  <tr key={t.id} style={{ background: i%2===0 ? '#fafafa' : 'white', borderBottom:'1px solid #eee' }}>
                     <td style={{ padding:'12px 16px', fontWeight:'600', color:BLEU }}>{t.code_trajet}</td>
                     <td style={{ padding:'12px 16px' }}>{fmt(t.heure_prise)}</td>
                     <td style={{ padding:'12px 16px' }}>{fmt(t.heure_arrivee)}</td>
@@ -293,7 +353,6 @@ export default function Dashboard({ user, onLogout }) {
             </table>
           )}
 
-          {/* Tableau disponibilites */}
           {onglet==='disponibilites' && (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
@@ -309,8 +368,7 @@ export default function Dashboard({ user, onLogout }) {
                     Aucune disponibilité pour cette date
                   </td></tr>
                 ) : dispos.map((d,i) => (
-                  <tr key={d.id} style={{ background: i%2===0 ? '#fafafa' : 'white',
-                    borderBottom:'1px solid #eee' }}>
+                  <tr key={d.id} style={{ background: i%2===0 ? '#fafafa' : 'white', borderBottom:'1px solid #eee' }}>
                     <td style={{ padding:'12px 16px', fontWeight:'600', color:BLEU }}>{d.numero_chauffeur}</td>
                     <td style={{ padding:'12px 16px' }}>{d.prenom} {d.nom}</td>
                     <td style={{ padding:'12px 16px' }}>{d.type_vehicule}</td>
@@ -322,6 +380,11 @@ export default function Dashboard({ user, onLogout }) {
               </tbody>
             </table>
           )}
+
+          {onglet==='chauffeurs' && <GestionChauffeurs />}
+
+          {onglet==='accuses' && <AccusesReception />}
+
         </div>
       </div>
     </div>
