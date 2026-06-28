@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
+import CarteTrajetsChauffeur from './CarteTrajetsChauffeur';
 
 const BLEU      = '#1F4E79';
 const HEURES    = Array.from({length: 18}, (_, i) => i + 6);
@@ -35,6 +36,7 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
   const [dragOver,     setDragOver]   = useState(null);
   const [masquer,      setMasquer]    = useState(false);
   const [tooltip,      setTooltip]    = useState(null);
+  const [carteCh,      setCarteCh]    = useState(null);
 
   // Recherche
   const [showRecherche, setShowRecherche] = useState(false);
@@ -337,6 +339,7 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
               <div style={{ fontWeight: '700' }}>{tooltip.code}</div>
               <div>{fmt(tooltip.prise)} → {fmt(tooltip.arrivee)}</div>
               <div style={{ opacity: 0.85, marginTop: 4 }}>{tooltip.adresse}</div>
+              {tooltip.destination && <div style={{ opacity: 0.85, marginTop: 2 }}>→ {tooltip.destination}</div>}
               {tooltip.notes && <div style={{ opacity: 0.75, fontStyle: 'italic' }}>{tooltip.notes}</div>}
             </div>
           )}
@@ -375,7 +378,7 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
                       <div key={t.id} draggable
                         onDragStart={() => startDrag(t)}
                         onDragEnd={() => { setDragging(null); stopAutoScroll(); }}
-                        onMouseMove={e => setTooltip({ x: e.clientX, y: e.clientY, code: t.code_trajet, prise: t.heure_prise, arrivee: t.heure_arrivee, adresse: t.adresse_prise, notes: t.notes })}
+                        onMouseMove={e => setTooltip({ x: e.clientX, y: e.clientY, code: t.code_trajet, prise: t.heure_prise, arrivee: t.heure_arrivee, adresse: t.adresse_prise, destination: t.adresse_arrivee, notes: t.notes })}
                         onMouseLeave={() => setTooltip(null)}
                         style={{ position: 'absolute', top, left, width, height, background: '#FF9800', color: 'white', borderRadius: '4px', padding: '2px 4px', fontSize: '11px', fontWeight: '600', cursor: 'grab', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.2)', zIndex: 10, opacity: dragging?.id === t.id ? 0.4 : 1, userSelect: 'none' }}>
                         <div>{t.code_trajet}</div>
@@ -403,6 +406,12 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
                   onDrop={() => onDrop(ch)}>
 
                   <div style={{ height: HAUTEUR_HEADER, minHeight: HAUTEUR_HEADER, maxHeight: HAUTEUR_HEADER, background: 'white', borderBottom: `1px solid ${cl}`, boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', padding: '0', position: 'sticky', top: 0, zIndex: 15, transition: 'background 0.15s' }}>
+                    <button
+                      onClick={() => setCarteCh(ch)}
+                      title="Voir les trajets sur la carte"
+                      style={{ position: 'absolute', top: 4, right: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 2, zIndex: 16 }}>
+                      🗺️
+                    </button>
                     <div
                       onClick={async () => { if (onEnvoiIndividuel && confirm(`Envoyer le programme par email a ${ch.prenom} ${ch.nom} ?`)) { await onEnvoiIndividuel(ch.id); await charger(); if (onRefresh) onRefresh(); } }}
                       title={noteParChauffeur[ch.id] ? `📝 ${noteParChauffeur[ch.id]}` : 'Envoyer programme par email'}
@@ -431,7 +440,7 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
                         <div key={aff.id} draggable
                           onDragStart={() => startDrag(trajetData, aff.id, ch.id)}
                           onDragEnd={() => { setDragging(null); stopAutoScroll(); }}
-                          onMouseMove={e => setTooltip({ x: e.clientX, y: e.clientY, code: aff.code_trajet, prise: aff.heure_prise, arrivee: aff.heure_arrivee, adresse: aff.adresse_prise, notes: aff.notes })}
+                          onMouseMove={e => setTooltip({ x: e.clientX, y: e.clientY, code: aff.code_trajet, prise: aff.heure_prise, arrivee: aff.heure_arrivee, adresse: aff.adresse_prise, destination: aff.adresse_arrivee, notes: aff.notes })}
                           onMouseLeave={() => setTooltip(null)}
                           style={{ position: 'absolute', top, left: lft, width: w, height, background: cl, color: 'white', borderRadius: '4px', padding: '2px 4px', fontSize: '11px', fontWeight: '600', overflow: 'hidden', zIndex: surligne ? 20 : 10, cursor: 'grab', opacity: dragging?.id === aff.trajet_id ? 0.4 : (rTr && !surligne ? 0.3 : 1), boxShadow: surligne ? `0 0 0 2px white, 0 0 0 4px ${cl}, 0 4px 8px rgba(0,0,0,0.2)` : '0 2px 4px rgba(0,0,0,0.15)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -458,6 +467,15 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
             )}
           </div>
         </div>
+      )}
+
+      {carteCh && (
+        <CarteTrajetsChauffeur
+          chauffeur={carteCh}
+          trajets={affectations.filter(a => a.chauffeur_id === carteCh.id)}
+          date={date}
+          onClose={() => setCarteCh(null)}
+        />
       )}
     </div>
   );

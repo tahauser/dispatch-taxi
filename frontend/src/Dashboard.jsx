@@ -36,6 +36,7 @@ export default function Dashboard({ user, onLogout }) {
   const [trajets, setTrajets]         = useState([]);
   const [affectations, setAffectations] = useState([]);
   const [dispos, setDispos]           = useState([]);
+  const [section, setSection] = useState('dispatch');
   const [onglet, setOnglet] = useState('calendrier');
   const [loading, setLoading]         = useState(false);
   const [message, setMessage]         = useState('');
@@ -49,8 +50,8 @@ export default function Dashboard({ user, onLogout }) {
   const [importLoading, setImportLoading] = useState(false);
 
   useEffect(() => {
-    if (['calendrier','affectations','trajets','disponibilites'].includes(onglet)) chargerDonnees();
-  }, [date, onglet]);
+    if (section === 'dispatch' && ['calendrier','affectations','trajets','disponibilites'].includes(onglet)) chargerDonnees();
+  }, [date, onglet, section]);
 
   async function chargerDonnees() {
     setLoading(true);
@@ -134,6 +135,21 @@ export default function Dashboard({ user, onLogout }) {
     setLoading(false);
   }
 
+  async function viderTrajets() {
+    if (!window.confirm(`Supprimer les ${trajets.length} trajets du ${date} et leurs affectations ?`)) return;
+    setLoading(true); setMessage('');
+    try {
+      const res = await api.delete(`/trajets/vider?date=${date}`);
+      setMessage(res.data.message);
+      setDejaPropose(false); setDejaEnvoye(false);
+      if (msgTimer.current) clearTimeout(msgTimer.current);
+      msgTimer.current = setTimeout(() => setMessage(''), 8000);
+      setRefreshKey(k => k+1);
+      await chargerDonnees();
+    } catch (err) { setMessage(err.response?.data?.message || 'Erreur'); }
+    setLoading(false);
+  }
+
   async function handleImportExcel(e) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -148,6 +164,7 @@ export default function Dashboard({ user, onLogout }) {
       setMessage(res.data.message);
       if (msgTimer.current) clearTimeout(msgTimer.current);
       msgTimer.current = setTimeout(() => setMessage(''), 10000);
+      setRefreshKey(k => k+1);
       await chargerDonnees();
     } catch (err) {
       setMessage(err.response?.data?.message || "Erreur d'import");
@@ -159,13 +176,20 @@ export default function Dashboard({ user, onLogout }) {
   const nbNonAffectes = trajets.filter(t => !affectations.find(a => a.trajet_id === t.id)).length;
   const nbDispos      = [...new Set(dispos.map(d => d.chauffeur_id))].length;
 
+  // Menu principal de navigation
+  const menu = [
+    { id:'dispatch',   label:'📅 Dispatch' },
+    { id:'chauffeurs', label:'👥 Chauffeurs' },
+    { id:'rapports',   label:'📊 Rapports' },
+    { id:'parametres', label:'⚙️ Paramètres' },
+  ];
+
+  // Sous-onglets de la section Dispatch
   const onglets = [
     { id:'calendrier',     label:'📅 Calendrier' },
     { id:'affectations',   label:'Affectations' },
     { id:'trajets',        label:'Trajets' },
     { id:'disponibilites', label:'Disponibilités' },
-    { id:'chauffeurs',     label:'Chauffeurs' },
-    { id:'accuses',        label:'Accusés de réception' },
   ];
 
   const dateOnglets = ['calendrier','affectations','trajets','disponibilites'];
@@ -198,10 +222,25 @@ export default function Dashboard({ user, onLogout }) {
         </div>
       </div>
 
+      {/* Menu principal de navigation */}
+      <div style={{ background:'#173E61', paddingLeft:'16px', paddingRight:'16px',
+        display:'flex', gap:'4px', borderBottom:'3px solid '+BLEU, overflowX:'auto' }}>
+        {menu.map(m => (
+          <button key={m.id} onClick={() => setSection(m.id)}
+            style={{ padding:'14px 22px', border:'none', background: section===m.id ? '#f0f4f8' : 'transparent',
+              color: section===m.id ? BLEU : BLEU_CLAIR, cursor:'pointer', whiteSpace:'nowrap',
+              fontSize:'15px', fontWeight: section===m.id ? '700' : '500',
+              borderRadius:'8px 8px 0 0', marginBottom:'-3px',
+              borderBottom: section===m.id ? '3px solid '+BLEU : '3px solid transparent' }}>
+            {m.label}
+          </button>
+        ))}
+      </div>
+
       <div style={{ padding:'16px 8px', maxWidth:'100%', margin:'0 auto' }}>
 
-        {/* Barre d'actions — seulement sur les onglets date */}
-        {dateOnglets.includes(onglet) && (
+        {/* Barre d'actions — seulement dans la section Dispatch, sur les onglets date */}
+        {section==='dispatch' && dateOnglets.includes(onglet) && (
           <div style={{ display:'flex', gap:'12px', alignItems:'center', marginBottom:'24px', flexWrap:'wrap' }}>
             <button onClick={() => { const d=new Date(date); d.setDate(d.getDate()-1); setDate(d.toISOString().split('T')[0]); }}
               style={{ padding:'8px 12px', background:'white', border:'1px solid #ddd', borderRadius:'6px', cursor:'pointer', fontSize:'18px' }}>‹</button>
@@ -252,6 +291,14 @@ export default function Dashboard({ user, onLogout }) {
                 borderRadius:'6px', cursor:'pointer' }}>
               Actualiser
             </button>
+
+            {trajets.length > 0 && (
+              <button onClick={viderTrajets} disabled={loading}
+                style={{ padding:'8px 16px', background:'#c62828', color:'white', border:'none',
+                  borderRadius:'6px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
+                🗑 Vider trajets
+              </button>
+            )}
           </div>
         )}
 
@@ -264,28 +311,46 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         )}
 
-        {/* Onglets */}
-        <div style={{ display:'flex', gap:'4px', marginBottom:'16px', flexWrap:'wrap' }}>
-          {onglets.map(o => (
-            <button key={o.id} onClick={() => setOnglet(o.id)}
-              style={{ padding:'8px 20px', border:'none', borderRadius:'6px 6px 0 0',
-                cursor:'pointer', fontWeight: onglet===o.id ? '600' : '400',
-                background: onglet===o.id ? 'white' : '#e0e9f3',
-                color: onglet===o.id ? BLEU : '#555', fontSize:'14px' }}>
-              {o.label}
-            </button>
-          ))}
-        </div>
+        {/* Sous-onglets — seulement dans la section Dispatch */}
+        {section==='dispatch' && (
+          <div style={{ display:'flex', gap:'4px', marginBottom:'16px', flexWrap:'wrap' }}>
+            {onglets.map(o => (
+              <button key={o.id} onClick={() => setOnglet(o.id)}
+                style={{ padding:'8px 20px', border:'none', borderRadius:'6px 6px 0 0',
+                  cursor:'pointer', fontWeight: onglet===o.id ? '600' : '400',
+                  background: onglet===o.id ? 'white' : '#e0e9f3',
+                  color: onglet===o.id ? BLEU : '#555', fontSize:'14px' }}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Contenu */}
-        <div style={{ background:'white', borderRadius:'0 10px 10px 10px',
+        <div style={{ background:'white', borderRadius: section==='dispatch' ? '0 10px 10px 10px' : '10px',
           boxShadow:'0 2px 8px rgba(0,0,0,0.08)', overflow:'hidden' }}>
 
-          {onglet==='calendrier' && (
+          {/* ===== Section Chauffeurs ===== */}
+          {section==='chauffeurs' && <GestionChauffeurs />}
+
+          {/* ===== Section Rapports / Accusés de réception ===== */}
+          {section==='rapports' && <AccusesReception />}
+
+          {/* ===== Section Paramètres (à venir) ===== */}
+          {section==='parametres' && (
+            <div style={{ padding:'60px 40px', textAlign:'center', color:'#888' }}>
+              <div style={{ fontSize:'48px', marginBottom:'16px' }}>⚙️</div>
+              <div style={{ fontSize:'18px', fontWeight:'600', color:BLEU, marginBottom:'8px' }}>Paramètres</div>
+              <div style={{ fontSize:'14px' }}>Cette section sera disponible prochainement.</div>
+            </div>
+          )}
+
+          {/* ===== Section Dispatch ===== */}
+          {section==='dispatch' && onglet==='calendrier' && (
             <CalendrierDispatch onEnvoiIndividuel={envoyerIndividuel} onRefresh={chargerDonnees} date={date} refreshKey={refreshKey} />
           )}
 
-          {onglet==='affectations' && (
+          {section==='dispatch' && onglet==='affectations' && (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
                 <tr style={{ background:BLEU, color:'white' }}>
@@ -321,11 +386,11 @@ export default function Dashboard({ user, onLogout }) {
             </table>
           )}
 
-          {onglet==='trajets' && (
+          {section==='dispatch' && onglet==='trajets' && (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
                 <tr style={{ background:BLEU, color:'white' }}>
-                  {['Trajet','Prise','Fin','Vehicule','Adresse prise','Statut','Notes'].map(h => (
+                  {['Trajet','Prise','Fin','Vehicule','Adresse prise','Adresse destination','Statut','Notes'].map(h => (
                     <th key={h} style={{ padding:'12px 16px', textAlign:'left' }}>{h}</th>
                   ))}
                 </tr>
@@ -339,6 +404,8 @@ export default function Dashboard({ user, onLogout }) {
                     <td style={{ padding:'12px 16px' }}>{t.type_vehicule}</td>
                     <td style={{ padding:'12px 16px', maxWidth:'220px', overflow:'hidden',
                       textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.adresse_prise}</td>
+                    <td style={{ padding:'12px 16px', maxWidth:'220px', overflow:'hidden',
+                      textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{t.adresse_arrivee||''}</td>
                     <td style={{ padding:'12px 16px' }}>
                       <span style={{ padding:'3px 10px', borderRadius:'12px', fontSize:'12px',
                         background: t.statut==='en_attente' ? '#fff8e1' : t.statut==='affecte' ? '#e3f2fd' : '#e8f5e9',
@@ -353,7 +420,7 @@ export default function Dashboard({ user, onLogout }) {
             </table>
           )}
 
-          {onglet==='disponibilites' && (
+          {section==='dispatch' && onglet==='disponibilites' && (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
                 <tr style={{ background:BLEU, color:'white' }}>
@@ -380,10 +447,6 @@ export default function Dashboard({ user, onLogout }) {
               </tbody>
             </table>
           )}
-
-          {onglet==='chauffeurs' && <GestionChauffeurs />}
-
-          {onglet==='accuses' && <AccusesReception />}
 
         </div>
       </div>

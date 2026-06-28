@@ -3,6 +3,7 @@ const pool    = require('../models/db');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const multer  = require('multer');
 const XLSX    = require('xlsx');
+const { geocoderAdresse } = require('../utils/geocode');
 const router  = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -123,6 +124,30 @@ router.post('/import-excel', authMiddleware, requireRole('dispatch','admin'), up
     let importes = 0, doublons = 0, erreurs = 0;
     const erreursDetail = [];
 
+    // Cache de géocodage pour cet import : on réutilise les coordonnées déjà
+    // présentes en base pour la même adresse (ré-imports, adresses partagées)
+    // avant d'interroger Nominatim, ce qui réduit fortement le nombre d'appels.
+    const cacheGeo = new Map();
+    async function geocoderCache(adresse) {
+      const cle = String(adresse || '').trim().toLowerCase();
+      if (!cle || cle === 'non spécifiée') return null;
+      if (cacheGeo.has(cle)) return cacheGeo.get(cle);
+      // 1) déjà géocodée en base ?
+      const existante = await pool.query(
+        `SELECT lat_prise AS lat, lng_prise AS lng FROM trajets
+           WHERE LOWER(adresse_prise)=$1 AND lat_prise IS NOT NULL
+         UNION ALL
+         SELECT lat_arrivee AS lat, lng_arrivee AS lng FROM trajets
+           WHERE LOWER(adresse_arrivee)=$1 AND lat_arrivee IS NOT NULL
+         LIMIT 1`, [cle]
+      );
+      let coords = existante.rows[0]
+        ? { lat: parseFloat(existante.rows[0].lat), lng: parseFloat(existante.rows[0].lng) }
+        : await geocoderAdresse(adresse);
+      cacheGeo.set(cle, coords);
+      return coords;
+    }
+
     for (const row of rows) {
       try {
         const codeTrajet = col(row, 'Code trajet', 'Code_trajet', 'code trajet', 'CODE TRAJET');
@@ -163,15 +188,24 @@ router.post('/import-excel', authMiddleware, requireRole('dispatch','admin'), up
         const statutNorm = ['en_attente','affecte','termine','annule'].includes(statutExo.toLowerCase())
           ? statutExo.toLowerCase() : 'en_attente';
 
+        // Géocodage à l'import : on résout les coordonnées une fois pour toutes
+        // (cache mémoire + cache BD) afin que la carte s'affiche instantanément.
+        const adrPriseFinale = adressePrise || 'Non spécifiée';
+        const coordsPrise   = await geocoderCache(adrPriseFinale);
+        const coordsArrivee = adresseDest ? await geocoderCache(adresseDest) : null;
+
         const r = await pool.query(
           `INSERT INTO trajets
              (code_trajet, date_trajet, heure_prise, heure_arrivee, type_vehicule,
-              adresse_prise, adresse_arrivee, code_fixe, notes, statut)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+              adresse_prise, lat_prise, lng_prise,
+              adresse_arrivee, lat_arrivee, lng_arrivee, code_fixe, notes, statut)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
            ON CONFLICT (code_trajet) DO NOTHING
            RETURNING id`,
           [codeTrajet, dateTrajet, heurePrise, heureArrivee, typeVehicule.toUpperCase(),
-           adressePrise || 'Non spécifiée', adresseDest || null, codeTaxi || null, notes, statutNorm]
+           adrPriseFinale, coordsPrise?.lat ?? null, coordsPrise?.lng ?? null,
+           adresseDest || null, coordsArrivee?.lat ?? null, coordsArrivee?.lng ?? null,
+           codeTaxi || null, notes, statutNorm]
         );
         if (r.rowCount > 0) importes++; else doublons++;
       } catch (err) {

@@ -1,13 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from './api';
+import CarteTrajetsChauffeur from './CarteTrajetsChauffeur';
 
 const BLEU = '#1F4E79';
 
 const VEHICULES = ['TAXI', 'BERLINE', 'VAN', 'MINIBUS'];
 
+const PROVINCES = [
+  'Québec', 'Ontario', 'Colombie-Britannique', 'Alberta', 'Manitoba',
+  'Saskatchewan', 'Nouvelle-Écosse', 'Nouveau-Brunswick',
+  'Terre-Neuve-et-Labrador', 'Île-du-Prince-Édouard'
+];
+
 const VIDE = {
   numero_chauffeur: '', nom: '', prenom: '', email: '', telephone: '',
-  type_vehicule: 'TAXI', adresse_domicile: '', lat_domicile: '', lng_domicile: ''
+  type_vehicule: 'TAXI', adresse_domicile: '', code_postal: '', ville: '',
+  province: 'Québec', lat_domicile: '', lng_domicile: ''
 };
 
 export default function GestionChauffeurs() {
@@ -20,7 +28,95 @@ export default function GestionChauffeurs() {
   const [mdpTemp, setMdpTemp]         = useState('');
   const [showTous, setShowTous]       = useState(true);
 
+  // Carte des trajets
+  const today = new Date().toISOString().slice(0, 10);
+  const [carteCh, setCarteCh]         = useState(null);   // chauffeur dont on choisit la date
+  const [carteDate, setCarteDate]     = useState(today);
+  const [carteTrajets, setCarteTrajets] = useState(null); // affectations chargées -> ouvre la carte
+  const [carteLoading, setCarteLoading] = useState(false);
+
+  async function ouvrirCarte(ch, dateChoisie) {
+    setCarteLoading(true);
+    try {
+      const res = await api.get(`/affectations?date=${dateChoisie}`);
+      setCarteTrajets(res.data.filter(a => a.chauffeur_id === ch.id));
+    } catch {
+      setCarteTrajets([]);
+    }
+    setCarteLoading(false);
+  }
+
+  // Autocomplétion adresse (Nominatim)
+  const [suggestions, setSuggestions]   = useState([]);
+  const [showSuggest, setShowSuggest]   = useState(false);
+  const [searching, setSearching]       = useState(false);
+  const debounceRef = useRef(null);
+  const skipSearchRef = useRef(false); // évite une recherche juste après sélection
+
   useEffect(() => { charger(); }, [showTous]);
+
+  // Debounce 300ms sur le champ adresse
+  useEffect(() => {
+    if (skipSearchRef.current) { skipSearchRef.current = false; return; }
+    const q = forme.adresse_domicile?.trim();
+    if (!modalOuvert || !q || q.length < 3) {
+      setSuggestions([]); setShowSuggest(false); setSearching(false);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSearching(true);
+    debounceRef.current = setTimeout(() => rechercherAdresse(q), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [forme.adresse_domicile, modalOuvert]);
+
+  async function rechercherAdresse(query) {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}`
+        + `&format=json&limit=5&countrycodes=ca&addressdetails=1`;
+      const res = await fetch(url, { headers: { 'Accept-Language': 'fr' } });
+      const data = await res.json();
+      setSuggestions(Array.isArray(data) ? data : []);
+      setShowSuggest(true);
+    } catch {
+      setSuggestions([]); setShowSuggest(false);
+    }
+    setSearching(false);
+  }
+
+  // Map des provinces Nominatim (anglais/abréviations) vers nos libellés
+  const PROVINCE_MAP = {
+    'quebec': 'Québec', 'québec': 'Québec',
+    'ontario': 'Ontario',
+    'british columbia': 'Colombie-Britannique', 'colombie-britannique': 'Colombie-Britannique',
+    'alberta': 'Alberta',
+    'manitoba': 'Manitoba',
+    'saskatchewan': 'Saskatchewan',
+    'nova scotia': 'Nouvelle-Écosse', 'nouvelle-écosse': 'Nouvelle-Écosse',
+    'new brunswick': 'Nouveau-Brunswick', 'nouveau-brunswick': 'Nouveau-Brunswick',
+    'newfoundland and labrador': 'Terre-Neuve-et-Labrador', 'terre-neuve-et-labrador': 'Terre-Neuve-et-Labrador',
+    'prince edward island': 'Île-du-Prince-Édouard', 'île-du-prince-édouard': 'Île-du-Prince-Édouard'
+  };
+
+  function choisirSuggestion(s) {
+    const a = s.address || {};
+    const ville = a.city || a.town || a.village || a.municipality || a.hamlet || '';
+    const numero = a.house_number ? a.house_number + ' ' : '';
+    const rue = a.road || '';
+    const adresse = (numero + rue).trim() || s.display_name.split(',')[0];
+    const provBrut = (a.state || '').toLowerCase();
+    const province = PROVINCE_MAP[provBrut] || forme.province || 'Québec';
+    skipSearchRef.current = true; // ne pas relancer la recherche après remplissage
+    setForme(f => ({
+      ...f,
+      adresse_domicile: adresse,
+      code_postal: a.postcode || '',
+      ville,
+      province,
+      lat_domicile: s.lat || '',
+      lng_domicile: s.lon || ''
+    }));
+    setSuggestions([]); setShowSuggest(false);
+  }
 
   async function charger() {
     setLoading(true);
@@ -47,6 +143,9 @@ export default function GestionChauffeurs() {
         telephone: chauffeur.telephone || '',
         type_vehicule: chauffeur.type_vehicule || 'TAXI',
         adresse_domicile: chauffeur.adresse_domicile || '',
+        code_postal: chauffeur.code_postal || '',
+        ville: chauffeur.ville || '',
+        province: chauffeur.province || 'Québec',
         lat_domicile: chauffeur.lat_domicile || '',
         lng_domicile: chauffeur.lng_domicile || ''
       });
@@ -54,6 +153,8 @@ export default function GestionChauffeurs() {
       setEditing(null);
       setForme(VIDE);
     }
+    skipSearchRef.current = true; // pré-remplissage : ne pas déclencher de recherche
+    setSuggestions([]); setShowSuggest(false);
     setMdpTemp('');
     setModalOuvert(true);
   }
@@ -211,6 +312,11 @@ export default function GestionChauffeurs() {
                         padding:'5px 10px', borderRadius:'4px', cursor:'pointer', fontSize:'12px' }}>
                       Réinit. mdp
                     </button>
+                    <button onClick={() => { setCarteCh(c); setCarteDate(today); }}
+                      style={{ background:'#e8f5e9', color:'#2e7d32', border:'none',
+                        padding:'5px 10px', borderRadius:'4px', cursor:'pointer', fontSize:'12px' }}>
+                      🗺️ Voir trajets
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -251,10 +357,71 @@ export default function GestionChauffeurs() {
                   {VEHICULES.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
-              {champ('adresse_domicile', 'Adresse domicile')}
+              {/* Adresse avec autocomplétion Nominatim */}
+              <div style={{ marginBottom:'14px', position:'relative' }}>
+                <label style={{ display:'block', marginBottom:'5px', fontWeight:'500', color:'#333', fontSize:'13px' }}>
+                  Adresse (numéro + rue)
+                </label>
+                <input type="text" value={forme.adresse_domicile || ''} autoComplete="off"
+                  placeholder="Commencez à taper une adresse…"
+                  onChange={e => setForme(f => ({ ...f, adresse_domicile: e.target.value }))}
+                  onFocus={() => { if (suggestions.length) setShowSuggest(true); }}
+                  style={{ width:'100%', padding:'9px 12px', border:'1px solid #ddd',
+                    borderRadius:'6px', fontSize:'14px', boxSizing:'border-box' }} />
+                {searching && (
+                  <span style={{ position:'absolute', right:'12px', top:'34px',
+                    fontSize:'12px', color:'#888' }}>⏳ recherche…</span>
+                )}
+                {showSuggest && suggestions.length > 0 && (
+                  <ul style={{ listStyle:'none', margin:'2px 0 0', padding:0,
+                    position:'absolute', left:0, right:0, zIndex:10, background:'white',
+                    border:'1px solid #ddd', borderRadius:'6px', maxHeight:'220px',
+                    overflowY:'auto', boxShadow:'0 6px 20px rgba(0,0,0,0.15)' }}>
+                    {suggestions.map(s => (
+                      <li key={s.place_id} onClick={() => choisirSuggestion(s)}
+                        style={{ padding:'9px 12px', cursor:'pointer', fontSize:'13px',
+                          borderBottom:'1px solid #f0f0f0', color:'#333' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f5f8fc'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                        {s.display_name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 16px' }}>
-                {champ('lat_domicile', 'Latitude GPS', 'number')}
-                {champ('lng_domicile', 'Longitude GPS', 'number')}
+                {champ('code_postal', 'Code postal')}
+                {champ('ville', 'Ville')}
+              </div>
+
+              <div style={{ marginBottom:'14px' }}>
+                <label style={{ display:'block', marginBottom:'5px', fontWeight:'500', color:'#333', fontSize:'13px' }}>Province</label>
+                <select value={forme.province || 'Québec'}
+                  onChange={e => setForme(f => ({ ...f, province: e.target.value }))}
+                  style={{ width:'100%', padding:'9px 12px', border:'1px solid #ddd',
+                    borderRadius:'6px', fontSize:'14px', boxSizing:'border-box' }}>
+                  {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 16px' }}>
+                <div style={{ marginBottom:'14px' }}>
+                  <label style={{ display:'block', marginBottom:'5px', fontWeight:'500', color:'#333', fontSize:'13px' }}>Latitude GPS</label>
+                  <input type="text" value={forme.lat_domicile || ''} readOnly
+                    placeholder="auto"
+                    style={{ width:'100%', padding:'9px 12px', border:'1px solid #ddd',
+                      borderRadius:'6px', fontSize:'14px', boxSizing:'border-box',
+                      background:'#f5f5f5', color:'#666' }} />
+                </div>
+                <div style={{ marginBottom:'14px' }}>
+                  <label style={{ display:'block', marginBottom:'5px', fontWeight:'500', color:'#333', fontSize:'13px' }}>Longitude GPS</label>
+                  <input type="text" value={forme.lng_domicile || ''} readOnly
+                    placeholder="auto"
+                    style={{ width:'100%', padding:'9px 12px', border:'1px solid #ddd',
+                      borderRadius:'6px', fontSize:'14px', boxSizing:'border-box',
+                      background:'#f5f5f5', color:'#666' }} />
+                </div>
               </div>
               {!editing && (
                 <div style={{ background:'#e8f5e9', padding:'10px 14px', borderRadius:'6px',
@@ -277,6 +444,47 @@ export default function GestionChauffeurs() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal choix de date pour la carte */}
+      {carteCh && !carteTrajets && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:1500,
+          display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'white', borderRadius:'12px', padding:'24px',
+            maxWidth:'380px', width:'90%', boxShadow:'0 8px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px' }}>
+              <h3 style={{ margin:0, color:BLEU, fontSize:'16px' }}>
+                🗺️ Trajets de {carteCh.prenom} {carteCh.nom}
+              </h3>
+              <button onClick={() => setCarteCh(null)}
+                style={{ background:'none', border:'none', fontSize:'22px', cursor:'pointer', color:'#888' }}>×</button>
+            </div>
+            <label style={{ display:'block', marginBottom:'6px', fontWeight:'500', color:'#333', fontSize:'13px' }}>Date</label>
+            <input type="date" value={carteDate} onChange={e => setCarteDate(e.target.value)}
+              style={{ width:'100%', padding:'9px 12px', border:'1px solid #ddd',
+                borderRadius:'6px', fontSize:'14px', boxSizing:'border-box', marginBottom:'18px' }} />
+            <div style={{ display:'flex', gap:'12px', justifyContent:'flex-end' }}>
+              <button onClick={() => setCarteCh(null)}
+                style={{ background:'white', border:'1px solid #ddd', padding:'9px 18px',
+                  borderRadius:'6px', cursor:'pointer', fontSize:'14px' }}>Annuler</button>
+              <button onClick={() => ouvrirCarte(carteCh, carteDate)} disabled={carteLoading}
+                style={{ background:BLEU, color:'white', border:'none', padding:'9px 20px',
+                  borderRadius:'6px', cursor:'pointer', fontWeight:'600', fontSize:'14px' }}>
+                {carteLoading ? '...' : 'Afficher la carte'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Carte plein écran */}
+      {carteCh && carteTrajets && (
+        <CarteTrajetsChauffeur
+          chauffeur={carteCh}
+          trajets={carteTrajets}
+          date={carteDate}
+          onClose={() => { setCarteCh(null); setCarteTrajets(null); }}
+        />
       )}
     </div>
   );

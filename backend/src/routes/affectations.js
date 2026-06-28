@@ -10,14 +10,18 @@ router.get('/', authMiddleware, async (req, res) => {
     let query, params;
     if (req.user.role === 'chauffeur') {
       query = `SELECT a.*, t.code_trajet, t.heure_prise, t.heure_arrivee,
-               t.adresse_prise, t.type_vehicule, t.notes, t.date_trajet
+               t.adresse_prise, t.lat_prise, t.lng_prise,
+               t.adresse_arrivee, t.lat_arrivee, t.lng_arrivee,
+               t.type_vehicule, t.notes, t.date_trajet
                FROM affectations a JOIN trajets t ON t.id = a.trajet_id
                WHERE a.chauffeur_id = $1 AND ($2::date IS NULL OR a.date_programme = $2)
                ORDER BY t.heure_prise`;
       params = [req.user.id, date || null];
     } else {
       query = `SELECT a.*, t.code_trajet, t.heure_prise, t.heure_arrivee,
-               t.adresse_prise, t.type_vehicule, t.notes, t.date_trajet,
+               t.adresse_prise, t.lat_prise, t.lng_prise,
+               t.adresse_arrivee, t.lat_arrivee, t.lng_arrivee,
+               t.type_vehicule, t.notes, t.date_trajet,
                c.nom, c.prenom, c.numero_chauffeur
                FROM affectations a
                JOIN trajets t ON t.id = a.trajet_id
