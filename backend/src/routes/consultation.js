@@ -23,8 +23,12 @@ router.get('/logs', authMiddleware, requireRole('dispatch','admin'), async (req,
               END AS statut_consultation
        FROM envois_email e
        JOIN chauffeurs c ON c.id = e.chauffeur_id
-       LEFT JOIN consultation_logs cl
-         ON cl.chauffeur_id = e.chauffeur_id AND cl.date_programme = e.date_programme
+       LEFT JOIN (
+         SELECT DISTINCT ON (chauffeur_id, date_programme)
+           chauffeur_id, date_programme, date_consultation, ip_address
+         FROM consultation_logs
+         ORDER BY chauffeur_id, date_programme, date_consultation DESC
+       ) cl ON cl.chauffeur_id = e.chauffeur_id AND cl.date_programme = e.date_programme
        WHERE ($1::date IS NULL OR e.date_programme = $1)
        ORDER BY e.envoye_le DESC, c.nom`,
       [date || null]
