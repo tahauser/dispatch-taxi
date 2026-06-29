@@ -10,8 +10,8 @@ router.get('/', authMiddleware, async (req, res) => {
     let query, params;
     if (req.user.role === 'chauffeur') {
       query = `SELECT a.*, t.code_trajet, t.heure_prise, t.heure_arrivee,
-               t.adresse_prise, t.lat_prise, t.lng_prise,
-               t.adresse_arrivee, t.lat_arrivee, t.lng_arrivee,
+               t.adresse_prise, t.adresse_arrivee,
+               t.lat_prise, t.lng_prise, t.lat_arrivee, t.lng_arrivee,
                t.type_vehicule, t.notes, t.date_trajet
                FROM affectations a JOIN trajets t ON t.id = a.trajet_id
                WHERE a.chauffeur_id = $1 AND ($2::date IS NULL OR a.date_programme = $2)
@@ -19,8 +19,8 @@ router.get('/', authMiddleware, async (req, res) => {
       params = [req.user.id, date || null];
     } else {
       query = `SELECT a.*, t.code_trajet, t.heure_prise, t.heure_arrivee,
-               t.adresse_prise, t.lat_prise, t.lng_prise,
-               t.adresse_arrivee, t.lat_arrivee, t.lng_arrivee,
+               t.adresse_prise, t.adresse_arrivee,
+               t.lat_prise, t.lng_prise, t.lat_arrivee, t.lng_arrivee,
                t.type_vehicule, t.notes, t.date_trajet,
                c.nom, c.prenom, c.numero_chauffeur
                FROM affectations a
@@ -44,7 +44,8 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
   try {
     const trajetsRes = await pool.query(
       `SELECT id, code_trajet, heure_prise, heure_arrivee,
-              type_vehicule, adresse_prise, lat_prise, lng_prise
+              type_vehicule, adresse_prise, lat_prise, lng_prise,
+              adresse_arrivee, lat_arrivee, lng_arrivee
        FROM trajets WHERE date_trajet = $1 AND statut = 'en_attente'
        ORDER BY heure_prise`, [date]
     );
@@ -62,7 +63,7 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
     if (chauffeursRes.rows.length === 0)
       return res.status(404).json({ message: 'Aucun chauffeur disponible' });
 
-    const { affectations, nonAffectes } = optimiserAffectations(trajetsRes.rows, chauffeursRes.rows);
+    const { affectations, nonAffectes, details } = optimiserAffectations(trajetsRes.rows, chauffeursRes.rows);
 
     let sauvegardes = 0; let ignorees = 0;
     for (const aff of affectations) {
@@ -80,40 +81,7 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
       );
       if (r.rows[0]?.inserted) sauvegardes++; else ignorees++;
     }
-    // Analyser pourquoi les trajets ne sont pas affectes
-    const details = [];
-    for (const code of nonAffectes) {
-      const trajet = trajetsRes.rows.find(t => t.code_trajet === code);
-      if (!trajet) continue;
-      const hPrise = trajet.heure_prise;
-      const hArr   = trajet.heure_arrivee;
-      const tDeb   = parseInt(hPrise.split(':')[0]) * 60 + parseInt(hPrise.split(':')[1]);
-      const tFin   = parseInt(hArr.split(':')[0])  * 60 + parseInt(hArr.split(':')[1]);
-
-      // Chauffeurs avec bon type de vehicule
-      const bonsTypes = chauffeursRes.rows.filter(c =>
-        !trajet.type_vehicule || trajet.type_vehicule === 'TAXI' || c.type_vehicule === trajet.type_vehicule
-      );
-      if (bonsTypes.length === 0) {
-        details.push(`${code}: aucun chauffeur ${trajet.type_vehicule} disponible`);
-        continue;
-      }
-      // Chauffeurs avec dispo couvrant ce trajet
-      const avecDispo = bonsTypes.filter(c => {
-        const dispos = c.disponibilites || [];
-        return dispos.some(d => {
-          const dD = parseInt(d.heure_debut.split(':')[0])*60;
-          const dF = parseInt(d.heure_fin.split(':')[0])*60;
-          return dD <= tDeb && dF >= tFin;
-        });
-      });
-      if (avecDispo.length === 0) {
-        details.push(`${code} (${hPrise.substring(0,5)}-${hArr.substring(0,5)} ${trajet.type_vehicule}): aucun chauffeur ${trajet.type_vehicule} libre sur cette plage`);
-      } else {
-        details.push(`${code} (${hPrise.substring(0,5)}-${hArr.substring(0,5)}): Aucun chauffeur disponible pour cette heure`);
-      }
-    }
-
+    // Les raisons détaillées de non-affectation sont calculées par l'algorithme
     const raisonMsg = details.length > 0 ? ' | Non affectés: ' + details.join(' / ') : '';
     const msg = sauvegardes > 0
       ? `${sauvegardes} nouvelle(s) affectation(s)${ignorees>0?' ('+ignorees+' conservées)':''}${raisonMsg}`
