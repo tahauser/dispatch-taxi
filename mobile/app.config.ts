@@ -12,9 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     scheme: 'dispatchtaxi',
     orientation: 'portrait',
     userInterfaceStyle: 'automatic',
-    runtimeVersion: {
-      policy: 'appVersion',
-    },
+    runtimeVersion: '1.0.0',
     updates: {
       url: `https://u.expo.dev/${process.env.EXPO_PROJECT_ID ?? ''}`,
     },
