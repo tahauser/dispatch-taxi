@@ -12,7 +12,7 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "prebuildCommand": "npx expo prebuild --platform android",
+      "prebuildCommand": "npx expo prebuild --platform android && sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.10.2-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties",
       "android": {
         "buildType": "apk"
       },
