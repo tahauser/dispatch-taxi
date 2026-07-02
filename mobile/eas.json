@@ -12,11 +12,11 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "prebuildCommand": "npx expo prebuild --platform android && sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.10.2-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties",
+      "prebuildCommand": "npx expo prebuild --platform android && perl -i -pe 's|gradle-[0-9.]*-bin\\.zip|gradle-8.10.2-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties",
       "android": {
         "buildType": "apk"
       },
-      "node": "20.18.0",
+      "node": "20.19.4",
       "env": {
         "EAS_BUILD_WORKINGDIR": "mobile"
       }
