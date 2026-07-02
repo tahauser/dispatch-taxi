@@ -2,7 +2,8 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
-def projectRoot = rootDir.getAbsoluteFile().getParentFile()?.getAbsolutePath() ?: rootDir.getAbsoluteFile().getAbsolutePath()
+def projectRootFile = rootDir.getAbsoluteFile().getParentFile()
+def projectRoot = projectRootFile != null ? projectRootFile.getAbsolutePath() : rootDir.getAbsoluteFile().getAbsolutePath()
 
 /**
  * This is the configuration block to customize your React Native Android app.
