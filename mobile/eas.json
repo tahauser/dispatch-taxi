@@ -12,7 +12,7 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "prebuildCommand": "npx expo prebuild --platform android && python3 scripts/fix-gradle.py",
+      "prebuildCommand": "python3 scripts/fix-gradle.py",
       "android": {
         "buildType": "apk"
       },
