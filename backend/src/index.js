@@ -142,6 +142,21 @@ async function runMigrations() {
     cree_le         TIMESTAMP DEFAULT NOW()
   )`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS vehicule_couts (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vehicule_id   UUID NOT NULL REFERENCES vehicules(id) ON DELETE CASCADE,
+    date_cout     DATE NOT NULL,
+    type          VARCHAR(20) NOT NULL DEFAULT 'carburant',
+    montant       NUMERIC(10,2) NOT NULL CHECK (montant >= 0),
+    litres        NUMERIC(8,2),
+    kilometrage   INTEGER,
+    fournisseur   VARCHAR(120),
+    description   TEXT,
+    cree_par      UUID,
+    cree_le       TIMESTAMP DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_couts_veh ON vehicule_couts(vehicule_id, date_cout)`);
+
   // Statut de course + preuve de service
   for (const ddl of [
     `ADD COLUMN IF NOT EXISTS statut_course VARCHAR(20) NOT NULL DEFAULT 'a_faire'`,
@@ -171,6 +186,7 @@ app.use('/api/chauffeurs',     require('./routes/chauffeurs'));
 app.use('/api/vehicules',      require('./routes/vehicules'));
 app.use('/api/absences',       require('./routes/absences'));
 app.use('/api/conduite',       require('./routes/conduite'));
+app.use('/api/couts',          require('./routes/couts'));
 app.use('/api/affectations',   require('./routes/affectations'));
 app.use('/api/consultation',   require('./routes/consultation'));
 app.use('/api/routes',         require('./routes/routes'));

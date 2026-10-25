@@ -1,4 +1,5 @@
 import ExigencesConduite from './ExigencesConduite';
+import CoutsVehicules from './CoutsVehicules';
 import { useState, useEffect, useCallback } from 'react';
 import api from './api';
 import Avatar from './Avatar';
@@ -237,7 +238,7 @@ export default function GestionParc() {
       (!fa.etat || etat === fa.etat) && (!fa.type || a.type_vehicule === fa.type);
   });
 
-  const tabs = [['vehicules', '🚗 Véhicules'], ['affectations', '🔗 Affectations'], ['proposition', '✨ Proposition'], ['inspections', '🔍 Inspections'], ['alertes', '🔔 Alertes'], ['conduite', '🪪 Conduite']];
+  const tabs = [['vehicules', '🚗 Véhicules'], ['affectations', '🔗 Affectations'], ['proposition', '✨ Proposition'], ['inspections', '🔍 Inspections'], ['alertes', '🔔 Alertes'], ['conduite', '🪪 Conduite'], ['couts', '💰 Coûts']];
 
   return (
     <div>
@@ -493,6 +494,7 @@ export default function GestionParc() {
 
         {/* ───────── Alertes ───────── */}
         {onglet === 'conduite' && <ExigencesConduite />}
+        {onglet === 'couts' && <CoutsVehicules />}
 
         {onglet === 'alertes' && alParams && (<>
           <form onSubmit={sauverParams} style={{ background: '#f5f8fc', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
