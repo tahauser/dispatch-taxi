@@ -191,9 +191,12 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
       setMessage(`⚠️ Conflit — ${chauffeur.prenom} ${chauffeur.nom} a déjà un trajet à cette heure`);
       setDragging(null); return;
     }
-    const hasDispo = getDispos(chauffeur.id).length > 0;
-    if (!hasDispo) {
-      const ok = window.confirm(`${chauffeur.prenom} ${chauffeur.nom} n'a pas de disponibilité.\nVoulez-vous quand même l'affecter?`);
+    const dsp = getDispos(chauffeur.id);
+    const hP = toMin(dragging.heure_prise), hA = toMin(dragging.heure_arrivee);
+    const couvre = dsp.some(d => toMin(d.heure_debut) <= hP && toMin(d.heure_fin) >= hA);
+    if (!couvre) {
+      const plages = dsp.map(d => `${String(d.heure_debut).slice(0,5)}–${String(d.heure_fin).slice(0,5)}`).join(', ');
+      const ok = window.confirm(`${chauffeur.prenom} ${chauffeur.nom} ${dsp.length ? `n'est disponible que ${plages}` : "n'a pas de disponibilité"}, ce qui ne couvre pas ${dragging.code_trajet} (${String(dragging.heure_prise).slice(0,5)}–${String(dragging.heure_arrivee).slice(0,5)}).\nVoulez-vous quand même l'affecter?`);
       if (!ok) { setDragging(null); return; }
     }
     try {
