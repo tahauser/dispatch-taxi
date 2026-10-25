@@ -134,15 +134,17 @@ export default function ProfilChauffeur({ user }) {
         </button>
       </form>
 
-      <form onSubmit={changerMdp} style={carte}>
+      <form onSubmit={changerMdp} style={carte} method="post" action="/login" autoComplete="on">
+        <input type="email" name="email" autoComplete="username" value={user.email || ''} readOnly tabIndex={-1} aria-hidden="true"
+          style={{ position:'absolute', opacity:0, height:0, width:0, pointerEvents:'none' }} />
         <h2 style={{ color:BLEU, fontSize:'18px', margin:'0 0 16px' }}>Changer mon mot de passe</h2>
         <div style={{ display:'grid', gap:'14px' }}>
           <div><label style={label}>Mot de passe actuel</label>
-            <input type="password" value={mdp.ancien} onChange={e => setMdp(p => ({ ...p, ancien: e.target.value }))} required style={input} /></div>
+            <input type="password" name="current-password" autoComplete="current-password" value={mdp.ancien} onChange={e => setMdp(p => ({ ...p, ancien: e.target.value }))} required style={input} /></div>
           <div><label style={label}>Nouveau mot de passe (8 caractères min.)</label>
-            <input type="password" value={mdp.nouveau} onChange={e => setMdp(p => ({ ...p, nouveau: e.target.value }))} required style={input} /></div>
+            <input type="password" name="new-password" autoComplete="new-password" value={mdp.nouveau} onChange={e => setMdp(p => ({ ...p, nouveau: e.target.value }))} required style={input} /></div>
           <div><label style={label}>Confirmer le nouveau mot de passe</label>
-            <input type="password" value={mdp.confirm} onChange={e => setMdp(p => ({ ...p, confirm: e.target.value }))} required style={input} /></div>
+            <input type="password" name="confirm-password" autoComplete="new-password" value={mdp.confirm} onChange={e => setMdp(p => ({ ...p, confirm: e.target.value }))} required style={input} /></div>
         </div>
         <Msg m={msgMdp} />
         <button type="submit" style={{ ...btn, marginTop:'8px' }}>Modifier le mot de passe</button>

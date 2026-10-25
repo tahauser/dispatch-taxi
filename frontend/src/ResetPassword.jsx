@@ -38,11 +38,11 @@ export default function ResetPassword({ token }) {
             </a>
           </>
         ) : (
-          <form onSubmit={submit}>
+          <form onSubmit={submit} method="post" action="/login" autoComplete="on">
             <label style={{ display:'block', marginBottom:'6px', fontWeight:500 }}>Nouveau mot de passe</label>
-            <input type="password" value={mdp} onChange={e => setMdp(e.target.value)} required style={{ ...input, marginBottom:'16px' }} />
+            <input type="password" name="new-password" autoComplete="new-password" value={mdp} onChange={e => setMdp(e.target.value)} required style={{ ...input, marginBottom:'16px' }} />
             <label style={{ display:'block', marginBottom:'6px', fontWeight:500 }}>Confirmer</label>
-            <input type="password" value={mdp2} onChange={e => setMdp2(e.target.value)} required style={{ ...input, marginBottom:'20px' }} />
+            <input type="password" name="confirm-password" autoComplete="new-password" value={mdp2} onChange={e => setMdp2(e.target.value)} required style={{ ...input, marginBottom:'20px' }} />
             {erreur && <div style={{ background:'#ffebee', color:'#c62828', padding:'10px', borderRadius:'6px', marginBottom:'16px', fontSize:'14px' }}>{erreur}</div>}
             <button type="submit" disabled={loading}
               style={{ width:'100%', padding:'12px', background:'#1F4E79', color:'white', border:'none', borderRadius:'6px', fontSize:'16px', fontWeight:600, cursor:'pointer', opacity: loading ? 0.7 : 1 }}>

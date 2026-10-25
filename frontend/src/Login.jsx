@@ -42,16 +42,16 @@ export default function Login({ onLogin }) {
           <h1 style={{ color:'#1F4E79', fontSize:'24px', margin:'0' }}>Dispatch Taxi</h1>
           <p style={{ color:'#666', marginTop:'8px' }}>{oubli ? 'Mot de passe oublié' : 'Connexion'}</p>
         </div>
-        <form onSubmit={oubli ? handleOubli : handleSubmit}>
+        <form onSubmit={oubli ? handleOubli : handleSubmit} method="post" action="/login" autoComplete="on">
           <div style={{ marginBottom:'16px' }}>
             <label style={{ display:'block', marginBottom:'6px', color:'#333', fontWeight:'500' }}>Email</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required
+            <input type="email" name="email" id="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required
               style={{ width:'100%', padding:'10px 12px', border:'1px solid #ddd',
                 borderRadius:'6px', fontSize:'14px', boxSizing:'border-box' }} />
           </div>
           {!oubli && <div style={{ marginBottom:'24px' }}>
             <label style={{ display:'block', marginBottom:'6px', color:'#333', fontWeight:'500' }}>Mot de passe</label>
-            <input type="password" value={mdp} onChange={e=>setMdp(e.target.value)} required
+            <input type="password" name="password" id="password" autoComplete="current-password" value={mdp} onChange={e=>setMdp(e.target.value)} required
               style={{ width:'100%', padding:'10px 12px', border:'1px solid #ddd',
                 borderRadius:'6px', fontSize:'14px', boxSizing:'border-box' }} />
           </div>}
