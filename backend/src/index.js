@@ -157,6 +157,25 @@ async function runMigrations() {
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_couts_veh ON vehicule_couts(vehicule_id, date_cout)`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS dispo_rappels_parametres (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    actif BOOLEAN NOT NULL DEFAULT TRUE,
+    heure_rappel INTEGER NOT NULL DEFAULT 16,
+    canal_email BOOLEAN NOT NULL DEFAULT TRUE,
+    canal_sms BOOLEAN NOT NULL DEFAULT FALSE,
+    notifier_admins BOOLEAN NOT NULL DEFAULT TRUE,
+    derniere_execution DATE,
+    CHECK (id = 1)
+  )`);
+  await pool.query(`INSERT INTO dispo_rappels_parametres (id) VALUES (1) ON CONFLICT DO NOTHING`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS dispo_rappels_envoyes (
+    chauffeur_id UUID NOT NULL REFERENCES chauffeurs(id) ON DELETE CASCADE,
+    date_cible   DATE NOT NULL,
+    canal        VARCHAR(10) NOT NULL,
+    envoye_le    TIMESTAMP DEFAULT NOW(),
+    PRIMARY KEY (chauffeur_id, date_cible, canal)
+  )`);
+
   // Statut de course + preuve de service
   for (const ddl of [
     `ADD COLUMN IF NOT EXISTS statut_course VARCHAR(20) NOT NULL DEFAULT 'a_faire'`,
@@ -172,7 +191,7 @@ async function runMigrations() {
 
   console.log('Migrations OK');
 }
-runMigrations().then(() => require('./services/parcAlertes').demarrer()).catch(err => console.error('Migration error:', err.message));
+runMigrations().then(() => { require('./services/parcAlertes').demarrer(); require('./services/dispoRappels').demarrer(); }).catch(err => console.error('Migration error:', err.message));
 
 const app = express();
 app.use(cors());
@@ -187,6 +206,7 @@ app.use('/api/vehicules',      require('./routes/vehicules'));
 app.use('/api/absences',       require('./routes/absences'));
 app.use('/api/conduite',       require('./routes/conduite'));
 app.use('/api/couts',          require('./routes/couts'));
+app.use('/api/rappels-dispo',  require('./routes/rappelsDispo'));
 app.use('/api/affectations',   require('./routes/affectations'));
 app.use('/api/consultation',   require('./routes/consultation'));
 app.use('/api/routes',         require('./routes/routes'));

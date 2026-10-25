@@ -5,6 +5,7 @@ import AccusesReception from './AccusesReception';
 import ProfilChauffeur from './ProfilChauffeur';
 import GestionParc from './GestionParc';
 import GestionAbsences from './GestionAbsences';
+import RappelsDispo from './RappelsDispo';
 import { BadgeStatut, PreuveModal } from './EtapesCourse';
 import useIsMobile from './hooks/useIsMobile';
 import { useState, useEffect, useRef } from 'react';
@@ -429,6 +430,7 @@ export default function Dashboard({ user, onLogout }) {
           )}
 
           {section==='dispatch' && onglet==='disponibilites' && (
+            <><RappelsDispo />
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
                 <tr style={{ background:BLEU, color:'white' }}>
@@ -454,6 +456,7 @@ export default function Dashboard({ user, onLogout }) {
                 ))}
               </tbody>
             </table>
+            </>
           )}
 
         </div>

@@ -169,4 +169,28 @@ async function envoyerAlertesParc(dest, items, audience) {
   await transporter.sendMail({ from: `"Dispatch Taxi" <${process.env.EMAIL_FROM}>`, to: dest.email, subject: sujet, html });
 }
 
-module.exports = { envoyerAlertesParc, envoyerResetMdp, envoyerProgramme, envoyerAucunTrajet, envoyerAucuneDisponibilite, genererTokenConsultation };
+async function envoyerRappelDispo(ch, dateCible, heureLimite) {
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+    <div style="background:#1F4E79;padding:18px;border-radius:8px 8px 0 0;"><h1 style="color:white;margin:0;font-size:20px;">Rappel : vos disponibilités</h1></div>
+    <div style="background:#f8f9fa;padding:18px;border-left:4px solid #E65100;">
+      <p>Bonjour <strong>${esc(ch.prenom)} ${esc(ch.nom)}</strong>,</p>
+      <p>Vous n'avez pas encore indiqué vos disponibilités pour le <strong>${esc(fmtDate(dateCible))}</strong>.</p>
+      <p>Merci de les saisir avant <strong>${esc(heureLimite)}</strong> aujourd'hui, sinon aucune course ne pourra vous être attribuée.</p>
+      <p><a href="${esc(APP_URL)}" style="background:#1F4E79;color:white;padding:10px 18px;border-radius:6px;text-decoration:none;">Saisir mes disponibilités</a></p>
+      <p style="font-size:12px;color:#666;margin-top:16px;">Si vous êtes absent ce jour-là, contactez le dispatch pour le faire enregistrer.</p>
+    </div></body></html>`;
+  await transporter.sendMail({ from: `"Dispatch Taxi" <${process.env.EMAIL_FROM}>`, to: ch.email,
+    subject: `Rappel : saisissez vos disponibilités du ${fmtDate(dateCible)}`, html });
+}
+
+async function envoyerResumeRappelsDispo(dest, dateCible, manquants) {
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const lis = manquants.map(m => `<li>${esc(m.prenom)} ${esc(m.nom)} (${esc(m.numero_chauffeur)})</li>`).join('');
+  await transporter.sendMail({ from: `"Dispatch Taxi" <${process.env.EMAIL_FROM}>`, to: dest.email,
+    subject: `Disponibilités manquantes pour le ${fmtDate(dateCible)} (${manquants.length})`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:600px;"><p>Bonjour ${esc(dest.prenom)},</p>
+      <p>${manquants.length} chauffeur(s) n'ont pas saisi leurs disponibilités pour le ${esc(fmtDate(dateCible))} (rappel envoyé) :</p><ul>${lis}</ul></div>` });
+}
+
+module.exports = { envoyerRappelDispo, envoyerResumeRappelsDispo, envoyerAlertesParc, envoyerResetMdp, envoyerProgramme, envoyerAucunTrajet, envoyerAucuneDisponibilite, genererTokenConsultation };
