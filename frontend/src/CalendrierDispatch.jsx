@@ -414,7 +414,7 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
                       style={{ position: 'absolute', top: 4, right: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 2, zIndex: 16 }}>
                       🗺️
                     </button>
-                    <Avatar ch={ch} size={34} style={{ marginBottom: 2, border: '2px solid ' + (isTarget ? 'white' : cl) }} />
+                    <Avatar ch={ch} size={26} style={{ marginBottom: 1, border: '2px solid ' + (isTarget ? 'white' : cl) }} />
                     <div
                       onClick={async () => { if (onEnvoiIndividuel && confirm(`Envoyer le programme par email a ${ch.prenom} ${ch.nom} ?`)) { await onEnvoiIndividuel(ch.id); await charger(); if (onRefresh) onRefresh(); } }}
                       title={noteParChauffeur[ch.id] ? `📝 ${noteParChauffeur[ch.id]}` : 'Envoyer programme par email'}

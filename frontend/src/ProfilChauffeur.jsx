@@ -107,7 +107,7 @@ export default function ProfilChauffeur({ user }) {
           {estChauffeur ? `${user.prenom} ${user.nom} · N° ${user.numero_chauffeur}` : (user.role === 'admin' ? 'Compte administrateur' : 'Compte dispatch')}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'18px' }}>
-          <Avatar ch={{ ...user, photo }} size={96} style={{ border:`2px solid ${BLEU}` }} />
+          <Avatar ch={{ ...user, photo }} size={80} style={{ border:`2px solid ${BLEU}` }} />
           <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
             <label style={{ ...btn, display:'inline-block', textAlign:'center', cursor:'pointer' }}>
               📷 {photo ? 'Changer la photo' : 'Ajouter une photo'}
