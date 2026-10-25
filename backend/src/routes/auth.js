@@ -46,7 +46,7 @@ router.get('/me', authMiddleware, async (req, res) => {
     const result = await pool.query(
       `SELECT id, numero_chauffeur, nom, prenom, email, role,
               telephone, adresse_domicile, type_vehicule, actif,
-              date_naissance, numero_permis, categories_permis
+              date_naissance, numero_permis, categories_permis, photo
        FROM chauffeurs WHERE id = $1`, [req.user.id]
     );
     if (result.rows.length === 0)
@@ -105,6 +105,17 @@ router.post('/reset-password', async (req, res) => {
       `UPDATE chauffeurs SET mot_de_passe_hash=$1, reset_token_hash=NULL, reset_expires=NULL, modifie_le=NOW() WHERE id=$2`,
       [hash, r.rows[0].id]);
     res.json({ message: 'Mot de passe mis à jour' });
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+});
+
+// PUT /api/auth/photo — { photo: dataURL JPEG redimensionnée } ou '' pour supprimer
+router.put('/photo', authMiddleware, async (req, res) => {
+  const { photo } = req.body;
+  if (photo && (typeof photo !== 'string' || !photo.startsWith('data:image/jpeg;base64,') || photo.length > 90000))
+    return res.status(400).json({ message: 'Photo invalide ou trop lourde' });
+  try {
+    await pool.query('UPDATE chauffeurs SET photo=$1, modifie_le=NOW() WHERE id=$2', [photo || null, req.user.id]);
+    res.json({ message: 'Photo mise à jour' });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
 

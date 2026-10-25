@@ -27,6 +27,7 @@ async function runMigrations() {
   await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS date_naissance DATE`);
   await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS numero_permis VARCHAR(50)`);
   await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS categories_permis VARCHAR(100)`);
+  await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS photo TEXT`);
   await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS reset_token_hash TEXT`);
   await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP`);
 

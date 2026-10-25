@@ -17,12 +17,14 @@ export default function ProfilChauffeur({ user }) {
   const [f, setF] = useState({ telephone:'', adresse_domicile:'', date_naissance:'', numero_permis:'', categories:[] });
   const [msg, setMsg] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [photo, setPhoto] = useState('');
   const [mdp, setMdp] = useState({ ancien:'', nouveau:'', confirm:'' });
   const [msgMdp, setMsgMdp] = useState(null);
 
   useEffect(() => {
     api.get('/auth/me').then(r => {
       const d = r.data;
+      setPhoto(d.photo || '');
       setF({
         telephone: d.telephone || '',
         adresse_domicile: d.adresse_domicile || '',
@@ -50,6 +52,40 @@ export default function ProfilChauffeur({ user }) {
     } finally { setSaving(false); }
   }
 
+  function redimensionner(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const T = 256, ratio = Math.min(T / img.width, T / img.height, 1);
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * ratio); c.height = Math.round(img.height * ratio);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  async function choisirPhoto(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const data = await redimensionner(file);
+      await api.put('/auth/photo', { photo: data });
+      setPhoto(data);
+      setMsg({ type:'ok', text:'Photo mise à jour' });
+    } catch (err) {
+      setMsg({ type:'err', text: err.response?.data?.message || 'Photo non valide' });
+    }
+  }
+
+  async function supprimerPhoto() {
+    try { await api.put('/auth/photo', { photo: '' }); setPhoto(''); }
+    catch { setMsg({ type:'err', text:'Erreur' }); }
+  }
+
   async function changerMdp(e) {
     e.preventDefault();
     setMsgMdp(null);
@@ -64,27 +100,42 @@ export default function ProfilChauffeur({ user }) {
     }
   }
 
-  const carte = { background:'white', borderRadius:'10px', padding:'20px', marginBottom:'20px', boxShadow:'0 1px 4px rgba(0,0,0,0.08)' };
+  const carte = { background:'white', borderRadius:'10px', padding:'20px', marginBottom:'0', boxShadow:'0 1px 4px rgba(0,0,0,0.08)' };
   const btn = { padding:'10px 20px', background:BLEU, color:'white', border:'none', borderRadius:'6px', fontSize:'14px', fontWeight:600, cursor:'pointer' };
 
   return (
-    <div style={{ maxWidth:'640px' }}>
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(340px, 1fr))', gap:'20px', alignItems:'start' }}>
       <form onSubmit={sauver} style={carte}>
         <h2 style={{ color:BLEU, fontSize:'18px', margin:'0 0 4px' }}>Ma fiche chauffeur</h2>
         <div style={{ color:'#666', fontSize:'13px', marginBottom:'16px' }}>
           {user.prenom} {user.nom} · N° {user.numero_chauffeur}
         </div>
-        <div style={{ display:'grid', gap:'14px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'18px' }}>
+          {photo
+            ? <img src={photo} alt="Photo" style={{ width:'96px', height:'96px', borderRadius:'50%', objectFit:'cover', border:`2px solid ${BLEU}` }} />
+            : <div style={{ width:'96px', height:'96px', borderRadius:'50%', background:'#e3edf7', color:BLEU, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'34px', fontWeight:700 }}>
+                {(user.prenom?.[0] || '') + (user.nom?.[0] || '')}
+              </div>}
+          <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+            <label style={{ ...btn, display:'inline-block', textAlign:'center', cursor:'pointer' }}>
+              📷 {photo ? 'Changer la photo' : 'Ajouter une photo'}
+              <input type="file" accept="image/*" onChange={choisirPhoto} style={{ display:'none' }} />
+            </label>
+            {photo && <button type="button" onClick={supprimerPhoto}
+              style={{ background:'none', border:'none', color:'#c62828', cursor:'pointer', fontSize:'13px', textAlign:'left', padding:0 }}>Supprimer la photo</button>}
+          </div>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:'14px' }}>
           <div><label style={label}>Téléphone</label>
             <input type="tel" value={f.telephone} onChange={e => set('telephone', e.target.value)} style={input} /></div>
-          <div><label style={label}>Adresse du domicile</label>
+          <div style={{ gridColumn:'1 / -1' }}><label style={label}>Adresse du domicile</label>
             <input value={f.adresse_domicile} onChange={e => set('adresse_domicile', e.target.value)} style={input}
               placeholder="No, rue, ville, code postal" /></div>
           <div><label style={label}>Date de naissance</label>
             <input type="date" value={f.date_naissance} onChange={e => set('date_naissance', e.target.value)} style={input} /></div>
           <div><label style={label}>Numéro de permis de conduire</label>
             <input value={f.numero_permis} onChange={e => set('numero_permis', e.target.value)} style={input} /></div>
-          <div><label style={label}>Catégories du permis</label>
+          <div style={{ gridColumn:'1 / -1' }}><label style={label}>Catégories du permis</label>
             <div style={{ display:'flex', flexWrap:'wrap', gap:'8px' }}>
               {CATEGORIES.map(c => (
                 <label key={c} style={{ display:'flex', alignItems:'center', gap:'4px', padding:'6px 10px',
