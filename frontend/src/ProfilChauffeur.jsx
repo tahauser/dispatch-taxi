@@ -15,7 +15,8 @@ function Msg({ m }) {
 }
 
 export default function ProfilChauffeur({ user }) {
-  const [f, setF] = useState({ telephone:'', adresse_domicile:'', date_naissance:'', numero_permis:'', categories:[] });
+  const estChauffeur = user.role === 'chauffeur';
+  const [f, setF] = useState({ prenom:'', nom:'', email:'', telephone:'', adresse_domicile:'', date_naissance:'', numero_permis:'', categories:[] });
   const [msg, setMsg] = useState(null);
   const [saving, setSaving] = useState(false);
   const [photo, setPhoto] = useState('');
@@ -27,6 +28,7 @@ export default function ProfilChauffeur({ user }) {
       const d = r.data;
       setPhoto(d.photo || '');
       setF({
+        prenom: d.prenom || '', nom: d.nom || '', email: d.email || '',
         telephone: d.telephone || '',
         adresse_domicile: d.adresse_domicile || '',
         date_naissance: d.date_naissance ? String(d.date_naissance).substring(0, 10) : '',
@@ -43,10 +45,18 @@ export default function ProfilChauffeur({ user }) {
     e.preventDefault();
     setSaving(true); setMsg(null);
     try {
-      await api.put('/auth/profil', {
-        telephone: f.telephone, adresse_domicile: f.adresse_domicile, date_naissance: f.date_naissance,
-        numero_permis: f.numero_permis, categories_permis: f.categories.join(','),
-      });
+      if (estChauffeur) {
+        await api.put('/auth/profil', {
+          telephone: f.telephone, adresse_domicile: f.adresse_domicile, date_naissance: f.date_naissance,
+          numero_permis: f.numero_permis, categories_permis: f.categories.join(','),
+        });
+      } else {
+        await api.put('/auth/profil', { prenom: f.prenom, nom: f.nom, telephone: f.telephone });
+        try {
+          const u = JSON.parse(localStorage.getItem('user') || '{}');
+          localStorage.setItem('user', JSON.stringify({ ...u, prenom: f.prenom, nom: f.nom }));
+        } catch { /* ignore */ }
+      }
       setMsg({ type:'ok', text:'Fiche enregistrée' });
     } catch (err) {
       setMsg({ type:'err', text: err.response?.data?.message || 'Erreur' });
@@ -92,9 +102,9 @@ export default function ProfilChauffeur({ user }) {
   return (
     <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(340px, 1fr))', gap:'20px', alignItems:'start' }}>
       <form onSubmit={sauver} style={carte}>
-        <h2 style={{ color:BLEU, fontSize:'18px', margin:'0 0 4px' }}>{user.role === 'chauffeur' ? 'Ma fiche chauffeur' : 'Mon profil'}</h2>
+        <h2 style={{ color:BLEU, fontSize:'18px', margin:'0 0 4px' }}>{estChauffeur ? 'Ma fiche chauffeur' : 'Mon profil'}</h2>
         <div style={{ color:'#666', fontSize:'13px', marginBottom:'16px' }}>
-          {user.prenom} {user.nom}{user.numero_chauffeur ? ` · N° ${user.numero_chauffeur}` : ''}
+          {estChauffeur ? `${user.prenom} ${user.nom} · N° ${user.numero_chauffeur}` : (user.role === 'admin' ? 'Compte administrateur' : 'Compte dispatch')}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'18px' }}>
           <Avatar ch={{ ...user, photo }} size={96} style={{ border:`2px solid ${BLEU}` }} />
@@ -108,6 +118,7 @@ export default function ProfilChauffeur({ user }) {
           </div>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:'14px' }}>
+          {estChauffeur ? (<>
           <div><label style={label}>Téléphone</label>
             <input type="tel" value={f.telephone} onChange={e => set('telephone', e.target.value)} style={input} /></div>
           <div style={{ gridColumn:'1 / -1' }}><label style={label}>Adresse du domicile</label>
@@ -127,6 +138,16 @@ export default function ProfilChauffeur({ user }) {
                 </label>
               ))}
             </div></div>
+          </>) : (<>
+          <div><label style={label}>Prénom</label>
+            <input value={f.prenom} onChange={e => set('prenom', e.target.value)} required style={input} /></div>
+          <div><label style={label}>Nom</label>
+            <input value={f.nom} onChange={e => set('nom', e.target.value)} required style={input} /></div>
+          <div><label style={label}>Email (identifiant de connexion)</label>
+            <input value={f.email} readOnly style={{ ...input, background:'#f5f5f5', color:'#666' }} /></div>
+          <div><label style={label}>Téléphone</label>
+            <input type="tel" value={f.telephone} onChange={e => set('telephone', e.target.value)} style={input} /></div>
+          </>)}
         </div>
         <Msg m={msg} />
         <button type="submit" disabled={saving} style={{ ...btn, marginTop:'8px', opacity: saving ? 0.7 : 1 }}>

@@ -121,6 +121,18 @@ router.put('/photo', authMiddleware, async (req, res) => {
 
 // PUT /api/auth/profil — le chauffeur renseigne sa propre fiche
 router.put('/profil', authMiddleware, async (req, res) => {
+  // Comptes dispatch/admin : identité et téléphone seulement (pas de fiche chauffeur)
+  if (req.user.role !== 'chauffeur') {
+    const { prenom, nom, telephone } = req.body;
+    if (!prenom?.trim() || !nom?.trim()) return res.status(400).json({ message: 'Prénom et nom requis' });
+    try {
+      const r = await pool.query(
+        `UPDATE chauffeurs SET prenom=$1, nom=$2, telephone=$3, modifie_le=NOW() WHERE id=$4
+         RETURNING id, nom, prenom, email, telephone, role`,
+        [prenom.trim(), nom.trim(), telephone?.trim() || null, req.user.id]);
+      return res.json(r.rows[0]);
+    } catch (err) { return res.status(500).json({ message: 'Erreur serveur' }); }
+  }
   const { telephone, adresse_domicile, date_naissance, numero_permis, categories_permis } = req.body;
   try {
     const cur = await pool.query('SELECT adresse_domicile FROM chauffeurs WHERE id=$1', [req.user.id]);
