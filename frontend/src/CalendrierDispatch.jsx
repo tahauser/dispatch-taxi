@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
 import Avatar from './Avatar';
+import VehiculeIcon from './VehiculeIcon';
 import CarteTrajetsChauffeur from './CarteTrajetsChauffeur';
 
 const BLEU      = '#1F4E79';
@@ -425,7 +426,7 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
                       )}
                     </div>
                     <div style={{ fontSize: '10px', color: isTarget ? 'rgba(255,255,255,0.8)' : '#888' }}>
-                      N°{ch.numero_chauffeur} · {ch.type_vehicule}
+                      N°{ch.numero_chauffeur} <VehiculeIcon type={ch.type_vehicule} size={14} style={{ verticalAlign: 'middle' }} />
                     </div>
                     {!hasDispo && <div style={{ fontSize: '9px', background: isTarget ? 'rgba(255,255,255,0.2)' : '#ffebee', color: isTarget ? 'white' : '#c62828', padding: '1px 5px', borderRadius: '3px', marginTop: '2px' }}>Sans dispo</div>}
                     {nbAff > 0 && <div style={{ fontSize: '9px', background: isTarget ? 'rgba(255,255,255,0.2)' : cl + '22', color: isTarget ? 'white' : cl, padding: '1px 5px', borderRadius: '3px', marginTop: '2px', fontWeight: '600' }}>{nbAff} trajet{nbAff > 1 ? 's' : ''}</div>}

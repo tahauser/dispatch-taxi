@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
+import VehiculeIcon from './VehiculeIcon';
 import ProfilChauffeur from './ProfilChauffeur';
 
 const BLEU = '#1F4E79';
@@ -140,7 +141,7 @@ function ModalAffecter({ trajet, chauffeurs, dispos, affectations, noteParChauff
                     )}
                   </div>
                   <div style={{ fontSize:'12px', color:'#888', marginTop:'2px' }}>
-                    N° {ch.numero_chauffeur} · {ch.type_vehicule}
+                    N° {ch.numero_chauffeur} <VehiculeIcon type={ch.type_vehicule} size={14} style={{ verticalAlign:'middle' }} />
                     {nbAff > 0 && ` · ${nbAff} trajet(s) ce jour`}
                   </div>
                   {noteParChauffeur[ch.id] && (
@@ -501,7 +502,7 @@ export default function DashboardMobile({ user, onLogout }) {
                           {noteParChauffeur[a.chauffeur_id] && <span style={{ fontSize:'12px' }}>📝</span>}
                         </div>
                         <div style={{ fontSize:'12px', color:'#888', marginTop:'2px' }}>
-                          N° {a.numero_chauffeur} · {a.type_vehicule}
+                          N° {a.numero_chauffeur} <VehiculeIcon type={a.type_vehicule} size={14} style={{ verticalAlign:'middle' }} />
                         </div>
                         {noteParChauffeur[a.chauffeur_id] && (
                           <div style={{ fontSize:'11px', color:'#666', marginTop:'4px',
@@ -648,7 +649,7 @@ export default function DashboardMobile({ user, onLogout }) {
                         {ch.prenom} {ch.nom}
                       </div>
                       <div style={{ fontSize:'11px', color:'#888' }}>
-                        N° {ch.numero_chauffeur} · {ch.type_vehicule}
+                        N° {ch.numero_chauffeur} <VehiculeIcon type={ch.type_vehicule} size={14} style={{ verticalAlign:'middle' }} />
                       </div>
                     </div>
                     <span style={{ fontSize:'11px', background:'#e8f5e9', color:'#2e7d32',

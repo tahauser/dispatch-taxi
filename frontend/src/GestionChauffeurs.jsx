@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
 import Avatar from './Avatar';
+import VehiculeIcon from './VehiculeIcon';
 import { redimensionner, CATEGORIES_PERMIS } from './imagePhoto';
 import CarteTrajetsChauffeur from './CarteTrajetsChauffeur';
 
@@ -291,11 +292,7 @@ export default function GestionChauffeurs() {
                 <td style={{ padding:'10px 14px', color:'#555' }}>{c.email}</td>
                 <td style={{ padding:'10px 14px' }}>{c.telephone || '—'}</td>
                 <td style={{ padding:'10px 14px' }}>
-                  <span style={{ background: c.type_vehicule === 'BERLINE' ? '#e3f2fd' : '#f3f4f6',
-                    color: c.type_vehicule === 'BERLINE' ? '#1565c0' : '#555',
-                    padding:'2px 8px', borderRadius:'10px', fontSize:'12px' }}>
-                    {c.type_vehicule}
-                  </span>
+                  <VehiculeIcon type={c.type_vehicule} size={26} />
                 </td>
                 <td style={{ padding:'10px 14px' }}>
                   <span style={{ background: c.actif ? '#e8f5e9' : '#fce4ec',
