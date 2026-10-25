@@ -3,6 +3,7 @@ import DashboardMobile from './DashboardMobile';
 import GestionChauffeurs from './GestionChauffeurs';
 import AccusesReception from './AccusesReception';
 import ProfilChauffeur from './ProfilChauffeur';
+import GestionParc from './GestionParc';
 import useIsMobile from './hooks/useIsMobile';
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
@@ -181,6 +182,7 @@ export default function Dashboard({ user, onLogout }) {
   const menu = [
     { id:'dispatch',   label:'📅 Dispatch' },
     { id:'chauffeurs', label:'👥 Chauffeurs' },
+    { id:'parc',       label:'🚗 Parc' },
     { id:'rapports',   label:'📊 Rapports' },
     { id:'parametres', label:'👤 Mon profil' },
   ];
@@ -333,6 +335,8 @@ export default function Dashboard({ user, onLogout }) {
 
           {/* ===== Section Chauffeurs ===== */}
           {section==='chauffeurs' && <GestionChauffeurs />}
+
+          {section==='parc' && <GestionParc />}
 
           {/* ===== Section Rapports / Accusés de réception ===== */}
           {section==='rapports' && <AccusesReception />}

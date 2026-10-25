@@ -31,6 +31,61 @@ async function runMigrations() {
   await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS reset_token_hash TEXT`);
   await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP`);
 
+  // Gestion de parc
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS vehicules (
+      id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      numero_unite          VARCHAR(20) NOT NULL UNIQUE,
+      immatriculation       VARCHAR(20) NOT NULL UNIQUE,
+      marque                VARCHAR(50),
+      modele                VARCHAR(50),
+      annee                 INTEGER,
+      couleur               VARCHAR(30),
+      type_vehicule         VARCHAR(50) NOT NULL DEFAULT 'TAXI',
+      nb_places             INTEGER DEFAULT 4,
+      kilometrage           INTEGER,
+      statut                VARCHAR(20) NOT NULL DEFAULT 'actif',
+      date_assurance_exp    DATE,
+      date_immat_exp        DATE,
+      date_prochain_entretien DATE,
+      notes                 TEXT,
+      cree_le               TIMESTAMP DEFAULT NOW(),
+      modifie_le            TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS vehicule_affectations (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      vehicule_id   UUID NOT NULL REFERENCES vehicules(id) ON DELETE CASCADE,
+      chauffeur_id  UUID NOT NULL REFERENCES chauffeurs(id) ON DELETE CASCADE,
+      date_debut    DATE NOT NULL,
+      date_fin      DATE,
+      notes         TEXT,
+      cree_par      UUID REFERENCES chauffeurs(id),
+      cree_le       TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_va_vehicule ON vehicule_affectations(vehicule_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_va_chauffeur ON vehicule_affectations(chauffeur_id)`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS vehicule_inspections (
+      id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      vehicule_id      UUID NOT NULL REFERENCES vehicules(id) ON DELETE CASCADE,
+      type_inspection  VARCHAR(30) NOT NULL DEFAULT 'periodique',
+      date_inspection  DATE NOT NULL,
+      date_prochaine   DATE,
+      kilometrage      INTEGER,
+      resultat         VARCHAR(20) NOT NULL DEFAULT 'conforme',
+      inspecteur       VARCHAR(100),
+      checklist        JSONB,
+      notes            TEXT,
+      cree_par         UUID REFERENCES chauffeurs(id),
+      cree_le          TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_vi_vehicule ON vehicule_inspections(vehicule_id, date_inspection DESC)`);
+
   console.log('Migrations OK');
 }
 runMigrations().catch(err => console.error('Migration error:', err.message));
@@ -44,6 +99,7 @@ app.use('/api/auth',           require('./routes/auth'));
 app.use('/api/trajets',        require('./routes/trajets'));
 app.use('/api/disponibilites', require('./routes/disponibilites'));
 app.use('/api/chauffeurs',     require('./routes/chauffeurs'));
+app.use('/api/vehicules',      require('./routes/vehicules'));
 app.use('/api/affectations',   require('./routes/affectations'));
 app.use('/api/consultation',   require('./routes/consultation'));
 app.use('/api/routes',         require('./routes/routes'));

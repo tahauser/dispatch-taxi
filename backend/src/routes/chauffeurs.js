@@ -8,7 +8,7 @@ const router   = express.Router();
 router.get('/', authMiddleware, requireRole('dispatch','admin'), async (req, res) => {
   const { tous } = req.query;
   try {
-    const filtre = (req.user.role === 'admin' && tous === '1') ? '' : `AND actif = TRUE`;
+    const filtre = (tous === '1') ? '' : `AND actif = TRUE`;
     const result = await pool.query(
       `SELECT id, numero_chauffeur, nom, prenom, email, telephone,
               type_vehicule, actif, adresse_domicile, lat_domicile, lng_domicile, role,

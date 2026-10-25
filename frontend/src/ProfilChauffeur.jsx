@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from './api';
 import Avatar from './Avatar';
+import VehiculeIcon from './VehiculeIcon';
 import { redimensionner, CATEGORIES_PERMIS as CATEGORIES } from './imagePhoto';
 
 const BLEU = '#1F4E79';
@@ -20,6 +21,7 @@ export default function ProfilChauffeur({ user }) {
   const [msg, setMsg] = useState(null);
   const [saving, setSaving] = useState(false);
   const [photo, setPhoto] = useState('');
+  const [vehicule, setVehicule] = useState(null);
   const [mdp, setMdp] = useState({ ancien:'', nouveau:'', confirm:'' });
   const [msgMdp, setMsgMdp] = useState(null);
 
@@ -37,6 +39,10 @@ export default function ProfilChauffeur({ user }) {
       });
     }).catch(() => setMsg({ type:'err', text:'Impossible de charger la fiche' }));
   }, []);
+
+  useEffect(() => {
+    if (estChauffeur) api.get('/vehicules/mon-vehicule').then(r => setVehicule(r.data)).catch(() => {});
+  }, [estChauffeur]);
 
   const set = (k, v) => setF(p => ({ ...p, [k]: v }));
   const toggleCat = c => setF(p => ({ ...p, categories: p.categories.includes(c) ? p.categories.filter(x => x !== c) : [...p.categories, c] }));
@@ -154,6 +160,22 @@ export default function ProfilChauffeur({ user }) {
           {saving ? 'Enregistrement...' : 'Enregistrer ma fiche'}
         </button>
       </form>
+
+      {estChauffeur && (
+        <div style={carte}>
+          <h2 style={{ color:BLEU, fontSize:'18px', margin:'0 0 12px' }}>Mon véhicule</h2>
+          {vehicule ? (
+            <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+              <VehiculeIcon type={vehicule.type_vehicule} size={44} />
+              <div style={{ fontSize:'14px' }}>
+                <div style={{ fontWeight:700, color:BLEU }}>{vehicule.numero_unite} · {vehicule.immatriculation}</div>
+                <div>{[vehicule.marque, vehicule.modele, vehicule.annee, vehicule.couleur].filter(Boolean).join(' ')}</div>
+                <div style={{ color:'#888', fontSize:'12px' }}>Depuis le {vehicule.depuis}{vehicule.jusqu_au ? ` · jusqu'au ${vehicule.jusqu_au}` : ''}</div>
+              </div>
+            </div>
+          ) : <div style={{ color:'#999', fontSize:'14px' }}>Aucun véhicule affecté pour le moment.</div>}
+        </div>
+      )}
 
       <form onSubmit={changerMdp} style={carte} method="post" action="/login" autoComplete="on">
         <input type="email" name="email" autoComplete="username" value={user.email || ''} readOnly tabIndex={-1} aria-hidden="true"
