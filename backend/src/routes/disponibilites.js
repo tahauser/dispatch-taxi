@@ -38,6 +38,10 @@ router.post('/', authMiddleware, requireRole('chauffeur'), checkDeadline, async 
   if (heure_fin <= heure_debut)
     return res.status(400).json({ message: 'heure_fin doit etre apres heure_debut' });
   try {
+    const abs = await pool.query(
+      `SELECT type FROM absences WHERE chauffeur_id=$1 AND $2::date BETWEEN date_debut AND date_fin LIMIT 1`, [req.user.id, date_dispo]);
+    if (abs.rows.length)
+      return res.status(409).json({ message: 'Vous avez une absence déclarée ce jour-là' });
     const result = await pool.query(
       `INSERT INTO disponibilites (chauffeur_id, date_dispo, heure_debut, heure_fin, note_journee)
        VALUES ($1,$2,$3,$4,$5)

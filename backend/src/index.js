@@ -112,6 +112,19 @@ async function runMigrations() {
     )
   `);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS absences (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    chauffeur_id  UUID NOT NULL REFERENCES chauffeurs(id) ON DELETE CASCADE,
+    type          VARCHAR(20) NOT NULL DEFAULT 'conge',
+    date_debut    DATE NOT NULL,
+    date_fin      DATE NOT NULL,
+    note          TEXT,
+    cree_par      UUID,
+    cree_le       TIMESTAMP DEFAULT NOW(),
+    CHECK (date_fin >= date_debut)
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_absences_ch ON absences(chauffeur_id, date_debut, date_fin)`);
+
   // Statut de course + preuve de service
   for (const ddl of [
     `ADD COLUMN IF NOT EXISTS statut_course VARCHAR(20) NOT NULL DEFAULT 'a_faire'`,
@@ -139,6 +152,7 @@ app.use('/api/trajets',        require('./routes/trajets'));
 app.use('/api/disponibilites', require('./routes/disponibilites'));
 app.use('/api/chauffeurs',     require('./routes/chauffeurs'));
 app.use('/api/vehicules',      require('./routes/vehicules'));
+app.use('/api/absences',       require('./routes/absences'));
 app.use('/api/affectations',   require('./routes/affectations'));
 app.use('/api/consultation',   require('./routes/consultation'));
 app.use('/api/routes',         require('./routes/routes'));

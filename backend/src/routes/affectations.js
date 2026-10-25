@@ -58,7 +58,9 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
               json_agg(json_build_object('heure_debut',d.heure_debut,'heure_fin',d.heure_fin)) AS disponibilites
        FROM chauffeurs c
        JOIN disponibilites d ON d.chauffeur_id = c.id AND d.date_dispo = $1
-       WHERE c.actif = TRUE GROUP BY c.id`, [date]
+       WHERE c.actif = TRUE
+         AND NOT EXISTS (SELECT 1 FROM absences ab WHERE ab.chauffeur_id=c.id AND $1::date BETWEEN ab.date_debut AND ab.date_fin)
+       GROUP BY c.id`, [date]
     );
     if (chauffeursRes.rows.length === 0)
       return res.status(404).json({ message: 'Aucun chauffeur disponible' });
@@ -325,6 +327,11 @@ router.post('/affecter', authMiddleware, requireRole('dispatch','admin'), async 
   if (!trajet_id || !chauffeur_id || !date)
     return res.status(400).json({ message: 'trajet_id, chauffeur_id et date requis' });
   try {
+    const abs = await pool.query(
+      `SELECT type, date_debut::text AS d, date_fin::text AS f FROM absences
+       WHERE chauffeur_id=$1 AND $2::date BETWEEN date_debut AND date_fin LIMIT 1`, [chauffeur_id, date]);
+    if (abs.rows.length)
+      return res.status(409).json({ message: `Chauffeur absent (${abs.rows[0].type}) du ${abs.rows[0].d} au ${abs.rows[0].f}` });
     const result = await pool.query(
       `INSERT INTO affectations (trajet_id, chauffeur_id, date_programme, proposee_par, statut)
        VALUES ($1,$2,$3,'dispatch','proposee')

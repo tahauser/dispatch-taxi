@@ -324,6 +324,7 @@ async function calculerProposition(date) {
     `SELECT c.id, c.prenom, c.nom, c.numero_chauffeur, c.type_vehicule, c.photo
      FROM chauffeurs c
      WHERE c.role='chauffeur' AND c.actif=TRUE
+       AND NOT EXISTS (SELECT 1 FROM absences ab WHERE ab.chauffeur_id=c.id AND $1::date BETWEEN ab.date_debut AND ab.date_fin)
        AND NOT EXISTS (SELECT 1 FROM vehicule_affectations a WHERE a.chauffeur_id=c.id
                        AND a.date_debut <= $1::date AND (a.date_fin IS NULL OR a.date_fin >= $1::date))
      ORDER BY c.numero_chauffeur`, [date]);

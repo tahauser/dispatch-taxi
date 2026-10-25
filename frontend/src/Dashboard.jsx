@@ -4,6 +4,7 @@ import GestionChauffeurs from './GestionChauffeurs';
 import AccusesReception from './AccusesReception';
 import ProfilChauffeur from './ProfilChauffeur';
 import GestionParc from './GestionParc';
+import GestionAbsences from './GestionAbsences';
 import { BadgeStatut, PreuveModal } from './EtapesCourse';
 import useIsMobile from './hooks/useIsMobile';
 import { useState, useEffect, useRef } from 'react';
@@ -184,6 +185,7 @@ export default function Dashboard({ user, onLogout }) {
   const menu = [
     { id:'dispatch',   label:'📅 Dispatch' },
     { id:'chauffeurs', label:'👥 Chauffeurs' },
+    { id:'absences',   label:'🏖️ Absences' },
     { id:'parc',       label:'🚗 Parc' },
     { id:'rapports',   label:'📊 Rapports' },
     { id:'parametres', label:'👤 Mon profil' },
@@ -338,6 +340,7 @@ export default function Dashboard({ user, onLogout }) {
           {/* ===== Section Chauffeurs ===== */}
           {section==='chauffeurs' && <GestionChauffeurs />}
 
+          {section==='absences' && <GestionAbsences />}
           {section==='parc' && <GestionParc />}
 
           {/* ===== Section Rapports / Accusés de réception ===== */}
