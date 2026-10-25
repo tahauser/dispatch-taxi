@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from './api';
+import EtapesCourse from './EtapesCourse';
 
 const BLEU = '#1F4E79';
 
@@ -151,6 +152,9 @@ export default function CalendrierProgrammeMobile({ user }) {
                       </div>
                     </div>
                   )}
+
+                  <EtapesCourse a={t} aujourdhui={estAujourdhui}
+                    onMaj={n => setTrajets(l => l.map(x => x.id === n.id ? n : x))} />
 
                   <div style={{ textAlign:'right', marginTop:'6px' }}>
                     <span style={{ fontSize:'11px', color:'#aaa' }}>

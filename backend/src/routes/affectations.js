@@ -9,7 +9,7 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     let query, params;
     if (req.user.role === 'chauffeur') {
-      query = `SELECT a.*, t.code_trajet, t.heure_prise, t.heure_arrivee,
+      query = `SELECT a.id, a.trajet_id, a.chauffeur_id, a.date_programme, a.proposee_par, a.statut, a.email_envoye_le, a.notes_dispatch, a.statut_course, a.t_en_route, a.t_arrive, a.t_a_bord, a.t_termine, a.note_course, (a.preuve_signature IS NOT NULL) AS a_signature, (a.preuve_photo IS NOT NULL) AS a_photo, t.code_trajet, t.heure_prise, t.heure_arrivee,
                t.adresse_prise, t.adresse_arrivee,
                t.lat_prise, t.lng_prise, t.lat_arrivee, t.lng_arrivee,
                t.type_vehicule, t.notes, t.date_trajet
@@ -18,7 +18,7 @@ router.get('/', authMiddleware, async (req, res) => {
                ORDER BY t.heure_prise`;
       params = [req.user.id, date || null];
     } else {
-      query = `SELECT a.*, t.code_trajet, t.heure_prise, t.heure_arrivee,
+      query = `SELECT a.id, a.trajet_id, a.chauffeur_id, a.date_programme, a.proposee_par, a.statut, a.email_envoye_le, a.notes_dispatch, a.statut_course, a.t_en_route, a.t_arrive, a.t_a_bord, a.t_termine, a.note_course, (a.preuve_signature IS NOT NULL) AS a_signature, (a.preuve_photo IS NOT NULL) AS a_photo, t.code_trajet, t.heure_prise, t.heure_arrivee,
                t.adresse_prise, t.adresse_arrivee,
                t.lat_prise, t.lng_prise, t.lat_arrivee, t.lng_arrivee,
                t.type_vehicule, t.notes, t.date_trajet,
@@ -91,6 +91,66 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
     console.error('Erreur proposer:', err.message);
     res.status(500).json({ message: 'Erreur serveur' });
   }
+});
+
+// ── Statut de course (chauffeur) ─────────────────────────────────────────
+// Séquence : a_faire → en_route → arrive → a_bord → termine  (arrive → no_show : client absent)
+const ETAPES = {
+  en_route: { depuis: ['a_faire'],                 col: 't_en_route' },
+  arrive:   { depuis: ['en_route', 'a_faire'],     col: 't_arrive' },
+  a_bord:   { depuis: ['arrive'],                  col: 't_a_bord' },
+  termine:  { depuis: ['a_bord'],                  col: 't_termine' },
+  no_show:  { depuis: ['arrive', 'en_route'],      col: 't_termine' },
+};
+const LIB_ETAPE = { a_faire: 'À faire', en_route: 'En route', arrive: 'Arrivé', a_bord: 'Client à bord', termine: 'Terminé', no_show: 'Client absent' };
+
+router.post('/:id/etape', authMiddleware, async (req, res) => {
+  const { etape, lat, lng, signature, photo, note } = req.body;
+  const def = ETAPES[etape];
+  if (!def) return res.status(400).json({ message: 'Étape invalide' });
+  if (signature && (typeof signature !== 'string' || !signature.startsWith('data:image/png;base64,') || signature.length > 120000))
+    return res.status(400).json({ message: 'Signature invalide ou trop lourde' });
+  if (photo && (typeof photo !== 'string' || !photo.startsWith('data:image/jpeg;base64,') || photo.length > 300000))
+    return res.status(400).json({ message: 'Photo invalide ou trop lourde' });
+  try {
+    const r = await pool.query(
+      `SELECT a.id, a.chauffeur_id, a.statut_course, a.date_programme::text AS jour,
+              (NOW() AT TIME ZONE 'America/Montreal')::date::text AS auj
+       FROM affectations a WHERE a.id=$1`, [req.params.id]);
+    const a = r.rows[0];
+    if (!a) return res.status(404).json({ message: 'Course introuvable' });
+    const estChauffeur = req.user.role === 'chauffeur';
+    if (estChauffeur && a.chauffeur_id !== req.user.id) return res.status(403).json({ message: 'Cette course ne vous est pas affectée' });
+    if (estChauffeur && a.jour !== a.auj) return res.status(409).json({ message: 'Vous ne pouvez mettre à jour que les courses du jour' });
+    if (!def.depuis.includes(a.statut_course) && estChauffeur)
+      return res.status(409).json({ message: `Étape impossible depuis « ${LIB_ETAPE[a.statut_course]} »` });
+    const evt = { etape, t: new Date().toISOString(), lat: Number.isFinite(+lat) && lat !== null && lat !== '' ? +lat : null,
+                  lng: Number.isFinite(+lng) && lng !== null && lng !== '' ? +lng : null, par: req.user.id };
+    const u = await pool.query(
+      `UPDATE affectations SET statut_course=$1, ${def.col}=NOW(),
+         geo_events = COALESCE(geo_events, '[]'::jsonb) || $2::jsonb,
+         preuve_signature = COALESCE($3, preuve_signature),
+         preuve_photo = COALESCE($4, preuve_photo),
+         note_course = COALESCE($5, note_course),
+         modifie_le = NOW()
+       WHERE id=$6
+       RETURNING id, statut_course, t_en_route, t_arrive, t_a_bord, t_termine, note_course`,
+      [etape, JSON.stringify(evt), signature || null, photo || null, note || null, req.params.id]);
+    res.json(u.rows[0]);
+  } catch (err) { console.error('Erreur étape course:', err.message); res.status(500).json({ message: 'Erreur serveur' }); }
+});
+
+// Détail d'une course avec preuve de service (dispatch)
+router.get('/:id/preuve', authMiddleware, requireRole('dispatch','admin'), async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT a.id, a.statut_course, a.t_en_route, a.t_arrive, a.t_a_bord, a.t_termine, a.geo_events,
+              a.preuve_signature, a.preuve_photo, a.note_course, a.date_programme::text AS date_programme,
+              t.code_trajet, t.heure_prise, t.heure_arrivee, c.prenom, c.nom, c.numero_chauffeur
+       FROM affectations a JOIN trajets t ON t.id=a.trajet_id JOIN chauffeurs c ON c.id=a.chauffeur_id WHERE a.id=$1`, [req.params.id]);
+    if (!r.rows.length) return res.status(404).json({ message: 'Introuvable' });
+    res.json(r.rows[0]);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
 
 router.put('/:id', authMiddleware, requireRole('dispatch','admin'), async (req, res) => {

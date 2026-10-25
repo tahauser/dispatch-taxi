@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from './api';
+import EtapesCourse from './EtapesCourse';
 
 const BLEU = '#1F4E79';
 const HEURES = Array.from({length: 19}, (_, i) => i + 6); // 06h -> 00h
@@ -193,6 +194,8 @@ export default function CalendrierProgramme({ user }) {
                     <div style={{ color:'#333', fontWeight: label==='Adresse'?'500':'400' }}>{val}</div>
                   </div>
                 ))}
+                <EtapesCourse a={selected} aujourdhui={(selected.date_programme||'').split('T')[0] === aujourd}
+                  onMaj={n => { setSelected(n); setTrajets(l => l.map(x => x.id === n.id ? n : x)); }} />
               </div>
             </div>
           )}

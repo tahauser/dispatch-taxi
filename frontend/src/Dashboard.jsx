@@ -4,6 +4,7 @@ import GestionChauffeurs from './GestionChauffeurs';
 import AccusesReception from './AccusesReception';
 import ProfilChauffeur from './ProfilChauffeur';
 import GestionParc from './GestionParc';
+import { BadgeStatut, PreuveModal } from './EtapesCourse';
 import useIsMobile from './hooks/useIsMobile';
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
@@ -37,6 +38,7 @@ export default function Dashboard({ user, onLogout }) {
   const [date, setDate]               = useState(new Date().toISOString().split('T')[0]);
   const [trajets, setTrajets]         = useState([]);
   const [affectations, setAffectations] = useState([]);
+  const [preuveId, setPreuveId]       = useState(null);
   const [dispos, setDispos]           = useState([]);
   const [section, setSection] = useState('dispatch');
   const [onglet, setOnglet] = useState('calendrier');
@@ -349,18 +351,19 @@ export default function Dashboard({ user, onLogout }) {
             <CalendrierDispatch onEnvoiIndividuel={envoyerIndividuel} onRefresh={chargerDonnees} date={date} refreshKey={refreshKey} />
           )}
 
+          {preuveId && <PreuveModal id={preuveId} onClose={() => setPreuveId(null)} />}
           {section==='dispatch' && onglet==='affectations' && (
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'14px' }}>
               <thead>
                 <tr style={{ background:BLEU, color:'white' }}>
-                  {['Trajet','Prise','Fin','Vehicule','Adresse prise','Chauffeur','Statut'].map(h => (
+                  {['Trajet','Prise','Fin','Vehicule','Adresse prise','Chauffeur','Statut','Course'].map(h => (
                     <th key={h} style={{ padding:'12px 16px', textAlign:'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {affectations.length === 0 ? (
-                  <tr><td colSpan="7" style={{ padding:'40px', textAlign:'center', color:'#999' }}>
+                  <tr><td colSpan="8" style={{ padding:'40px', textAlign:'center', color:'#999' }}>
                     Aucune affectation — cliquez sur "Proposer affectations"
                   </td></tr>
                 ) : affectations.map((a,i) => (
@@ -378,6 +381,9 @@ export default function Dashboard({ user, onLogout }) {
                         color: a.statut==='envoyee' ? '#2e7d32' : a.statut==='proposee' ? '#f57f17' : '#555' }}>
                         {fmtStatut(a.statut)}
                       </span>
+                    </td>
+                    <td style={{ padding:'12px 16px', cursor:'pointer' }} onClick={() => setPreuveId(a.id)} title="Voir le détail / la preuve">
+                      <BadgeStatut statut={a.statut_course} />{(a.a_signature || a.a_photo) && <span style={{ marginLeft:'6px' }}>📎</span>}
                     </td>
                   </tr>
                 ))}

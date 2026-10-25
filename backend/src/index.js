@@ -112,13 +112,26 @@ async function runMigrations() {
     )
   `);
 
+  // Statut de course + preuve de service
+  for (const ddl of [
+    `ADD COLUMN IF NOT EXISTS statut_course VARCHAR(20) NOT NULL DEFAULT 'a_faire'`,
+    `ADD COLUMN IF NOT EXISTS t_en_route TIMESTAMP`,
+    `ADD COLUMN IF NOT EXISTS t_arrive TIMESTAMP`,
+    `ADD COLUMN IF NOT EXISTS t_a_bord TIMESTAMP`,
+    `ADD COLUMN IF NOT EXISTS t_termine TIMESTAMP`,
+    `ADD COLUMN IF NOT EXISTS geo_events JSONB`,
+    `ADD COLUMN IF NOT EXISTS preuve_signature TEXT`,
+    `ADD COLUMN IF NOT EXISTS preuve_photo TEXT`,
+    `ADD COLUMN IF NOT EXISTS note_course TEXT`,
+  ]) await pool.query(`ALTER TABLE affectations ${ddl}`);
+
   console.log('Migrations OK');
 }
 runMigrations().then(() => require('./services/parcAlertes').demarrer()).catch(err => console.error('Migration error:', err.message));
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/auth',           require('./routes/auth'));
