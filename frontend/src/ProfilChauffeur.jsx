@@ -92,9 +92,9 @@ export default function ProfilChauffeur({ user }) {
   return (
     <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(340px, 1fr))', gap:'20px', alignItems:'start' }}>
       <form onSubmit={sauver} style={carte}>
-        <h2 style={{ color:BLEU, fontSize:'18px', margin:'0 0 4px' }}>Ma fiche chauffeur</h2>
+        <h2 style={{ color:BLEU, fontSize:'18px', margin:'0 0 4px' }}>{user.role === 'chauffeur' ? 'Ma fiche chauffeur' : 'Mon profil'}</h2>
         <div style={{ color:'#666', fontSize:'13px', marginBottom:'16px' }}>
-          {user.prenom} {user.nom} · N° {user.numero_chauffeur}
+          {user.prenom} {user.nom}{user.numero_chauffeur ? ` · N° ${user.numero_chauffeur}` : ''}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'18px' }}>
           <Avatar ch={{ ...user, photo }} size={96} style={{ border:`2px solid ${BLEU}` }} />

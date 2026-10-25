@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
+import ProfilChauffeur from './ProfilChauffeur';
 
 const BLEU = '#1F4E79';
 
@@ -424,6 +425,8 @@ export default function DashboardMobile({ user, onLogout }) {
           </div>
         )}
 
+        {onglet === 'profil' && <ProfilChauffeur user={user} />}
+
         {/* ── Onglet Affectations ── */}
         {onglet === 'affectations' && (
           trajets.length === 0 ? (
@@ -688,6 +691,7 @@ export default function DashboardMobile({ user, onLogout }) {
           { id:'affectations', icon:'📋', label:'Affectations', badge: nbAffectes },
           { id:'trajets',      icon:'🚕', label:'Trajets',      badge: nbNonAffectes, badgeRed: nbNonAffectes > 0 },
           { id:'dispos',       icon:'🕐', label:'Disponibilités', badge: nbDisposChauff },
+          { id:'profil',       icon:'👤', label:'Mon profil' },
         ].map(o => (
           <button key={o.id} onClick={() => setOnglet(o.id)}
             style={{

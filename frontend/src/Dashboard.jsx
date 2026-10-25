@@ -2,6 +2,7 @@ import CalendrierDispatch from './CalendrierDispatch';
 import DashboardMobile from './DashboardMobile';
 import GestionChauffeurs from './GestionChauffeurs';
 import AccusesReception from './AccusesReception';
+import ProfilChauffeur from './ProfilChauffeur';
 import useIsMobile from './hooks/useIsMobile';
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
@@ -181,7 +182,7 @@ export default function Dashboard({ user, onLogout }) {
     { id:'dispatch',   label:'📅 Dispatch' },
     { id:'chauffeurs', label:'👥 Chauffeurs' },
     { id:'rapports',   label:'📊 Rapports' },
-    { id:'parametres', label:'⚙️ Paramètres' },
+    { id:'parametres', label:'👤 Mon profil' },
   ];
 
   // Sous-onglets de la section Dispatch
@@ -336,14 +337,8 @@ export default function Dashboard({ user, onLogout }) {
           {/* ===== Section Rapports / Accusés de réception ===== */}
           {section==='rapports' && <AccusesReception />}
 
-          {/* ===== Section Paramètres (à venir) ===== */}
-          {section==='parametres' && (
-            <div style={{ padding:'60px 40px', textAlign:'center', color:'#888' }}>
-              <div style={{ fontSize:'48px', marginBottom:'16px' }}>⚙️</div>
-              <div style={{ fontSize:'18px', fontWeight:'600', color:BLEU, marginBottom:'8px' }}>Paramètres</div>
-              <div style={{ fontSize:'14px' }}>Cette section sera disponible prochainement.</div>
-            </div>
-          )}
+          {/* ===== Section Mon profil ===== */}
+          {section==='parametres' && <ProfilChauffeur user={user} />}
 
           {/* ===== Section Dispatch ===== */}
           {section==='dispatch' && onglet==='calendrier' && (
