@@ -316,7 +316,18 @@ export default function CalendrierDispo({ user, onDirtyChange }) {
 
       {/* Legende */}
       <div style={{ display:'flex', gap:'16px', marginBottom:'8px', fontSize:'12px', color:'#555' }}>
-        <span>💚 Disponible &nbsp; ⬜ Non disponible &nbsp; 🔲 Passe</span>
+        <span style={{ display:'flex', gap:'14px', alignItems:'center', flexWrap:'wrap' }}>
+          {[
+            { bg:'#C6EFCE', txt:'Disponible' },
+            { bg:'white',   txt:'Non disponible' },
+            { bg:'#f5f5f5', txt:'Verrouillé (jour passé ou saisie fermée)' },
+          ].map(l => (
+            <span key={l.txt} style={{ display:'flex', alignItems:'center', gap:'5px' }}>
+              <span style={{ width:'14px', height:'14px', background:l.bg, border:'1px solid #bbb', borderRadius:'3px', display:'inline-block' }} />
+              {l.txt}
+            </span>
+          ))}
+        </span>
         <span style={{ marginLeft:'auto', color:'#888' }}>
           Cliquez ou glissez pour sélectionner des créneaux
         </span>
