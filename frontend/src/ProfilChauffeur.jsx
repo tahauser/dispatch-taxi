@@ -170,7 +170,12 @@ export default function ProfilChauffeur({ user }) {
               <div style={{ fontSize:'14px' }}>
                 <div style={{ fontWeight:700, color:BLEU }}>{vehicule.numero_unite} · {vehicule.immatriculation}</div>
                 <div>{[vehicule.marque, vehicule.modele, vehicule.annee, vehicule.couleur].filter(Boolean).join(' ')}</div>
-                <div style={{ color:'#888', fontSize:'12px' }}>Depuis le {vehicule.depuis}{vehicule.jusqu_au ? ` · jusqu'au ${vehicule.jusqu_au}` : ''}</div>
+                {(vehicule.echeances || []).map(e => (
+                  <div key={e.type} style={{ marginTop:'6px', padding:'4px 10px', borderRadius:'6px', fontSize:'13px', fontWeight:600,
+                    background: e.jours < 0 ? '#fce4ec' : '#fff3e0', color: e.jours < 0 ? '#c62828' : '#E65100' }}>
+                    ⚠️ {e.libelle} {e.jours < 0 ? `en retard de ${-e.jours} j` : e.jours === 0 ? "aujourd'hui" : `dans ${e.jours} j`} ({e.date})
+                  </div>))}
+                <div style={{ color:'#888', fontSize:'12px', marginTop:'6px' }}>Depuis le {vehicule.depuis}{vehicule.jusqu_au ? ` · jusqu'au ${vehicule.jusqu_au}` : ''}</div>
               </div>
             </div>
           ) : <div style={{ color:'#999', fontSize:'14px' }}>Aucun véhicule affecté pour le moment.</div>}

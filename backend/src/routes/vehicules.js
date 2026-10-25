@@ -1,6 +1,7 @@
 const express = require('express');
 const pool    = require('../models/db');
 const { authMiddleware, requireRole } = require('../middleware/auth');
+const alertes = require('../services/parcAlertes');
 const router  = express.Router();
 
 const TYPES   = ['TAXI', 'BERLINE', 'VAN', 'MINIBUS'];
@@ -116,6 +117,52 @@ router.delete('/inspections/:id', authMiddleware, dispatch, async (req, res) => 
   catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
 
+// ── Alertes d'échéances ──────────────────────────────────────────────────
+router.get('/parametres', authMiddleware, dispatch, async (req, res) => {
+  try { const p = await alertes.lireParametres(); res.json(p); }
+  catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+});
+
+router.put('/parametres', authMiddleware, dispatch, async (req, res) => {
+  const b = req.body;
+  const jours = alertes.parseJours(b.jours_avant);
+  if (!jours.length) return res.status(400).json({ message: 'Indiquez au moins un délai en jours (ex. 30, 14, 7, 1)' });
+  const heure = parseInt(b.heure_envoi, 10);
+  if (!(heure >= 0 && heure <= 23)) return res.status(400).json({ message: 'Heure invalide (0 à 23)' });
+  try {
+    await pool.query(
+      `UPDATE parc_parametres SET jours_avant=$1, heure_envoi=$2, actif=$3, notifier_admins=$4, notifier_chauffeurs=$5 WHERE id=1`,
+      [jours.slice().sort((a, b) => b - a).join(','), heure, !!b.actif, !!b.notifier_admins, !!b.notifier_chauffeurs]);
+    res.json(await alertes.lireParametres());
+  } catch (err) { console.error('PUT parametres:', err.message); res.status(500).json({ message: 'Erreur serveur' }); }
+});
+
+// GET /api/vehicules/alertes/apercu — ce qui serait envoyé maintenant + échéances à venir (rien n'est envoyé)
+router.get('/alertes/apercu', authMiddleware, dispatch, async (req, res) => {
+  try {
+    const r = await alertes.calculerAlertes();
+    res.json({ aEnvoyer: r.aEnvoyer, aVenir: r.aVenir });
+  } catch (err) { console.error('apercu alertes:', err.message); res.status(500).json({ message: 'Erreur serveur' }); }
+});
+
+// POST /api/vehicules/alertes/executer — envoie maintenant
+router.post('/alertes/executer', authMiddleware, dispatch, async (req, res) => {
+  try {
+    const r = await alertes.executer({ envoyer: true });
+    res.json({ alertes: r.alertes, admins: r.admins, chauffeurs: r.chauffeurs, erreurs: r.erreurs });
+  } catch (err) { console.error('executer alertes:', err.message); res.status(500).json({ message: 'Erreur serveur' }); }
+});
+
+// GET /api/vehicules/alertes/journal
+router.get('/alertes/journal', authMiddleware, dispatch, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT j.type_echeance, j.date_echeance::text AS date_echeance, j.jours_restants, j.envoye_le, v.numero_unite
+       FROM parc_alertes_envoyees j JOIN vehicules v ON v.id=j.vehicule_id ORDER BY j.envoye_le DESC LIMIT 100`);
+    res.json(r.rows);
+  } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
+});
+
 // GET /api/vehicules/mon-vehicule — véhicule du chauffeur connecté
 router.get('/mon-vehicule', authMiddleware, async (req, res) => {
   try {
@@ -125,7 +172,16 @@ router.get('/mon-vehicule', authMiddleware, async (req, res) => {
        FROM vehicule_affectations a JOIN vehicules v ON v.id = a.vehicule_id
        WHERE a.chauffeur_id=$1 AND a.date_debut <= ${AUJ} AND (a.date_fin IS NULL OR a.date_fin >= ${AUJ})
        ORDER BY a.date_debut DESC LIMIT 1`, [req.user.id]);
-    res.json(r.rows[0] || null);
+    if (!r.rows[0]) return res.json(null);
+    const veh = (await pool.query(
+      `SELECT v.date_assurance_exp::text AS date_assurance_exp, v.date_immat_exp::text AS date_immat_exp,
+              v.date_prochain_entretien::text AS date_prochain_entretien, ${AUJ}::text AS today,
+              (SELECT date_prochaine::text FROM vehicule_inspections i WHERE i.vehicule_id=v.id ORDER BY date_inspection DESC, cree_le DESC LIMIT 1) AS insp_prochaine
+       FROM vehicules v WHERE v.numero_unite=$1`, [r.rows[0].numero_unite])).rows[0];
+    const params = await alertes.lireParametres();
+    const horizon = Math.max(...params.jours, 0);
+    const echeances = alertes.echeancesDe(veh, veh.today).filter(e => e.jours <= horizon).sort((a, b) => a.jours - b.jours);
+    res.json({ ...r.rows[0], echeances });
   } catch (err) { res.status(500).json({ message: 'Erreur serveur' }); }
 });
 

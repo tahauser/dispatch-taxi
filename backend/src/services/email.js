@@ -138,4 +138,35 @@ async function envoyerResetMdp(chauffeur, token) {
   });
 }
 
-module.exports = { envoyerResetMdp, envoyerProgramme, envoyerAucunTrajet, envoyerAucuneDisponibilite, genererTokenConsultation };
+async function envoyerAlertesParc(dest, items, audience) {
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const rows = items.map(a => {
+    const retard = a.jours < 0;
+    const quand = retard ? `en retard de ${-a.jours} j` : a.jours === 0 ? "aujourd'hui" : `dans ${a.jours} j`;
+    return `<tr>
+      <td style="padding:8px;border-bottom:1px solid #eee;"><b>${esc(a.numero_unite)}</b><br><span style="color:#777;font-size:12px;">${esc(a.vehicule)} · ${esc(a.immatriculation)}</span></td>
+      <td style="padding:8px;border-bottom:1px solid #eee;">${esc(a.libelle)}</td>
+      <td style="padding:8px;border-bottom:1px solid #eee;">${esc(a.date)}</td>
+      <td style="padding:8px;border-bottom:1px solid #eee;color:${retard ? '#c62828' : '#E65100'};font-weight:bold;">${quand}</td>
+      ${audience === 'admin' ? `<td style="padding:8px;border-bottom:1px solid #eee;">${esc(a.chauffeur || '— libre —')}</td>` : ''}
+    </tr>`;
+  }).join('');
+  const nbRetard = items.filter(a => a.jours < 0).length;
+  const sujet = audience === 'admin'
+    ? `Parc : ${items.length} échéance(s)${nbRetard ? ` dont ${nbRetard} en retard` : ''} — Dispatch Taxi`
+    : `Rappel : échéance de votre véhicule — Dispatch Taxi`;
+  const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:760px;margin:0 auto;padding:20px;">
+    <div style="background:#1F4E79;padding:18px;border-radius:8px 8px 0 0;"><h1 style="color:white;margin:0;font-size:20px;">Échéances du parc</h1></div>
+    <div style="background:#f8f9fa;padding:18px;border-left:4px solid #1F4E79;">
+      <p>Bonjour <strong>${esc(dest.prenom)} ${esc(dest.nom)}</strong>,</p>
+      <p>${audience === 'admin' ? 'Voici les échéances à traiter :' : 'Une échéance approche pour le véhicule qui vous est affecté :'}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;background:white;">
+        <tr style="background:#e0e9f3;text-align:left;"><th style="padding:8px;">Véhicule</th><th style="padding:8px;">Échéance</th><th style="padding:8px;">Date</th><th style="padding:8px;">Délai</th>${audience === 'admin' ? '<th style="padding:8px;">Chauffeur</th>' : ''}</tr>
+        ${rows}
+      </table>
+      <p style="font-size:12px;color:#666;margin-top:16px;">Message automatique du système de dispatch — ${esc(APP_URL)}</p>
+    </div></body></html>`;
+  await transporter.sendMail({ from: `"Dispatch Taxi" <${process.env.EMAIL_FROM}>`, to: dest.email, subject: sujet, html });
+}
+
+module.exports = { envoyerAlertesParc, envoyerResetMdp, envoyerProgramme, envoyerAucunTrajet, envoyerAucuneDisponibilite, genererTokenConsultation };

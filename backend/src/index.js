@@ -86,9 +86,35 @@ async function runMigrations() {
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_vi_vehicule ON vehicule_inspections(vehicule_id, date_inspection DESC)`);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS parc_parametres (
+      id INTEGER PRIMARY KEY DEFAULT 1,
+      jours_avant TEXT NOT NULL DEFAULT '30,14,7,1',
+      heure_envoi INTEGER NOT NULL DEFAULT 7,
+      actif BOOLEAN NOT NULL DEFAULT TRUE,
+      notifier_admins BOOLEAN NOT NULL DEFAULT TRUE,
+      notifier_chauffeurs BOOLEAN NOT NULL DEFAULT TRUE,
+      derniere_execution DATE,
+      CHECK (id = 1)
+    )
+  `);
+  await pool.query(`INSERT INTO parc_parametres (id) VALUES (1) ON CONFLICT DO NOTHING`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS parc_alertes_envoyees (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      vehicule_id UUID NOT NULL REFERENCES vehicules(id) ON DELETE CASCADE,
+      type_echeance VARCHAR(30) NOT NULL,
+      date_echeance DATE NOT NULL,
+      cle TEXT NOT NULL,
+      jours_restants INTEGER,
+      envoye_le TIMESTAMP DEFAULT NOW(),
+      UNIQUE (vehicule_id, cle)
+    )
+  `);
+
   console.log('Migrations OK');
 }
-runMigrations().catch(err => console.error('Migration error:', err.message));
+runMigrations().then(() => require('./services/parcAlertes').demarrer()).catch(err => console.error('Migration error:', err.message));
 
 const app = express();
 app.use(cors());

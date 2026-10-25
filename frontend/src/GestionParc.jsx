@@ -10,6 +10,7 @@ const STATUT_COULEUR = { actif: ['#e8f5e9', '#2e7d32'], maintenance: ['#fff3e0',
 const VIDE = { numero_unite: '', immatriculation: '', marque: '', modele: '', annee: '', couleur: '', type_vehicule: 'TAXI',
   nb_places: 4, kilometrage: '', statut: 'actif', date_assurance_exp: '', date_immat_exp: '', date_prochain_entretien: '', notes: '' };
 
+const LIBELLES = { inspection: 'Inspection', assurance: 'Assurance', immatriculation: 'Immatriculation', entretien: 'Entretien' };
 const TYPES_INSP = { periodique: 'Périodique', mecanique: 'Mécanique', securite: 'Sécurité', proprete: 'Propreté', apres_incident: 'Après incident' };
 const RESULTATS = { conforme: ['Conforme', '#e8f5e9', '#2e7d32'], conforme_reserve: ['Avec réserve', '#fff3e0', '#E65100'], non_conforme: ['Non conforme', '#fce4ec', '#c62828'] };
 const CHECK = [['freins', 'Freins'], ['pneus', 'Pneus'], ['feux', 'Feux et clignotants'], ['essuie_glaces', 'Essuie-glaces'],
@@ -21,6 +22,7 @@ const INSP_VIDE = { vehicule_id: '', type_inspection: 'periodique', date_inspect
 const aujourdhui = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Toronto' });
 const joursAvant = (d) => d ? Math.round((new Date(d + 'T12:00:00') - new Date(aujourdhui() + 'T12:00:00')) / 86400000) : null;
 
+let HORIZON = 30; // délai max d'avertissement (réglé dans l'onglet Alertes)
 function alertes(v) {
   const l = [];
   if (v.statut === 'actif' && !v.insp_date) l.push({ txt: 'Jamais inspecté', rouge: false });
@@ -28,7 +30,7 @@ function alertes(v) {
     const j = joursAvant(v[k]);
     if (j === null) return;
     if (j < 0) l.push({ txt: `${lib} échu`, rouge: true });
-    else if (j <= 30) l.push({ txt: `${lib} dans ${j} j`, rouge: false });
+    else if (j <= HORIZON) l.push({ txt: `${lib} dans ${j} j`, rouge: false });
   });
   return l;
 }
@@ -84,6 +86,9 @@ export default function GestionParc() {
   const [inspections, setInspections] = useState([]);
   const [modalI, setModalI] = useState(null);
   const [filtreV, setFiltreV] = useState('');
+  const [alParams, setAlParams] = useState(null);
+  const [alApercu, setAlApercu] = useState(null);
+  const [alJournal, setAlJournal] = useState([]);
   const [fv, setFv] = useState({ q: '', type: '', statut: '', occ: '', alerte: '' });
   const [fa, setFa] = useState({ q: '', etat: '', type: '' });
   const [fi, setFi] = useState({ q: '', resultat: '', etat: '', type: '' });
@@ -100,6 +105,11 @@ export default function GestionParc() {
         api.get('/vehicules'), api.get('/chauffeurs'), api.get('/vehicules/affectations'), api.get('/vehicules/inspections'),
       ]);
       setVehicules(v.data); setChauffeurs(c.data); setAffectations(a.data); setInspections(i.data);
+      try {
+        const p = await api.get('/vehicules/parametres');
+        HORIZON = Math.max(...p.data.jours, 1);
+        setAlParams(prev => prev || { ...p.data, jours_txt: p.data.jours_avant });
+      } catch { /* paramètres facultatifs */ }
     } catch { affMsg('Erreur de chargement', false); }
   }, []);
   useEffect(() => { charger(); }, [charger]);
@@ -123,6 +133,38 @@ export default function GestionParc() {
       setModalA(null); affMsg('✓ Affectation créée'); charger();
     } catch (err) { affMsg(err.response?.data?.message || 'Erreur', false); }
   }
+
+  async function sauverParams(e) {
+    e.preventDefault();
+    try {
+      const r = await api.put('/vehicules/parametres', {
+        jours_avant: alParams.jours_txt, heure_envoi: alParams.heure_envoi, actif: alParams.actif,
+        notifier_admins: alParams.notifier_admins, notifier_chauffeurs: alParams.notifier_chauffeurs });
+      HORIZON = Math.max(...r.data.jours, 1);
+      setAlParams({ ...r.data, jours_txt: r.data.jours_avant });
+      affMsg('✓ Paramètres enregistrés'); chargerAlertes();
+    } catch (err) { affMsg(err.response?.data?.message || 'Erreur', false); }
+  }
+
+  async function chargerAlertes() {
+    try {
+      const [a, j] = await Promise.all([api.get('/vehicules/alertes/apercu'), api.get('/vehicules/alertes/journal')]);
+      setAlApercu(a.data); setAlJournal(j.data);
+    } catch { affMsg('Erreur de chargement des alertes', false); }
+  }
+
+  async function executerAlertes() {
+    if (!window.confirm('Envoyer maintenant les courriels d\'alerte (administrateurs et chauffeurs concernés) ?')) return;
+    try {
+      const r = await api.post('/vehicules/alertes/executer');
+      const d = r.data;
+      affMsg(d.alertes === 0 ? 'Rien à envoyer : aucune nouvelle échéance.' :
+        `✓ ${d.alertes} alerte(s) — ${d.admins} courriel(s) admin, ${d.chauffeurs} courriel(s) chauffeur` + (d.erreurs.length ? ` — erreurs : ${d.erreurs[0]}` : ''), d.erreurs.length === 0);
+      chargerAlertes();
+    } catch (err) { affMsg(err.response?.data?.message || 'Erreur', false); }
+  }
+
+  useEffect(() => { if (onglet === 'alertes') chargerAlertes(); }, [onglet]);
 
   async function sauverInspection(e) {
     e.preventDefault();
@@ -194,7 +236,7 @@ export default function GestionParc() {
       (!fa.etat || etat === fa.etat) && (!fa.type || a.type_vehicule === fa.type);
   });
 
-  const tabs = [['vehicules', '🚗 Véhicules'], ['affectations', '🔗 Affectations'], ['proposition', '✨ Proposition'], ['inspections', '🔍 Inspections']];
+  const tabs = [['vehicules', '🚗 Véhicules'], ['affectations', '🔗 Affectations'], ['proposition', '✨ Proposition'], ['inspections', '🔍 Inspections'], ['alertes', '🔔 Alertes']];
 
   return (
     <div>
@@ -447,6 +489,75 @@ export default function GestionParc() {
             </table>
           </>);
         })()}
+
+        {/* ───────── Alertes ───────── */}
+        {onglet === 'alertes' && alParams && (<>
+          <form onSubmit={sauverParams} style={{ background: '#f5f8fc', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+            <h3 style={{ color: BLEU, fontSize: '15px', margin: '0 0 12px' }}>Paramètres des alertes</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', alignItems: 'end' }}>
+              <div><label style={lbl}>Prévenir à l'avance (jours, séparés par des virgules)</label>
+                <input value={alParams.jours_txt} onChange={e => setAlParams(p => ({ ...p, jours_txt: e.target.value }))} placeholder="30, 14, 7, 1" style={inp} /></div>
+              <div><label style={lbl}>Heure d'envoi quotidien (heure de Montréal)</label>
+                <select value={alParams.heure_envoi} onChange={e => setAlParams(p => ({ ...p, heure_envoi: Number(e.target.value) }))} style={inp}>
+                  {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, '0')} h 00</option>)}</select></div>
+            </div>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', margin: '14px 0', fontSize: '14px' }}>
+              {[['actif', 'Alertes activées'], ['notifier_admins', 'Prévenir les administrateurs / dispatch'], ['notifier_chauffeurs', 'Prévenir le chauffeur du véhicule']].map(([k, l]) => (
+                <label key={k} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={!!alParams[k]} onChange={e => setAlParams(p => ({ ...p, [k]: e.target.checked }))} />{l}</label>))}
+            </div>
+            <p style={{ fontSize: '12px', color: '#777', margin: '0 0 12px' }}>
+              Chaque seuil n'est envoyé qu'une fois par échéance. Une échéance dépassée est rappelée chaque jour jusqu'à sa mise à jour.
+              Couvre l'inspection, l'assurance, l'immatriculation et l'entretien des véhicules en service.
+            </p>
+            <button type="submit" style={{ ...btn(BLEU, 'white'), padding: '9px 22px', fontSize: '14px', fontWeight: 600 }}>Enregistrer</button>
+          </form>
+
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '10px' }}>
+            <h3 style={{ color: BLEU, fontSize: '15px', margin: 0 }}>À envoyer au prochain contrôle</h3>
+            <button onClick={chargerAlertes} style={{ ...btn('white', '#555'), border: '1px solid #ddd', padding: '6px 12px', fontSize: '13px' }}>Actualiser</button>
+            <button onClick={executerAlertes} disabled={!alApercu || alApercu.aEnvoyer.length === 0}
+              style={{ ...btn('#E65100', 'white'), padding: '7px 14px', fontSize: '13px', fontWeight: 600, opacity: alApercu && alApercu.aEnvoyer.length ? 1 : 0.5 }}>
+              📧 Envoyer maintenant</button>
+          </div>
+          {(() => {
+            const ligne = (a, k) => (
+              <tr key={a.vehicule_id + a.type + a.date} style={{ background: k % 2 ? 'white' : '#fafafa', borderBottom: '1px solid #eee' }}>
+                <td style={{ padding: '8px 12px' }}><b style={{ color: BLEU }}>{a.numero_unite}</b> <span style={{ fontSize: '12px', color: '#777' }}>{a.vehicule}</span></td>
+                <td style={{ padding: '8px 12px', fontSize: '13px' }}>{a.libelle}</td>
+                <td style={{ padding: '8px 12px', fontSize: '13px' }}>{a.date}</td>
+                <td style={{ padding: '8px 12px', fontSize: '13px', fontWeight: 600, color: a.jours < 0 ? '#c62828' : '#E65100' }}>{a.jours < 0 ? `En retard de ${-a.jours} j` : a.jours === 0 ? "Aujourd'hui" : `Dans ${a.jours} j`}</td>
+                <td style={{ padding: '8px 12px', fontSize: '13px', color: a.chauffeur ? '#333' : '#999' }}>{a.chauffeur || 'Libre (admin seulement)'}</td>
+              </tr>);
+            const tete = ['Véhicule', 'Échéance', 'Date', 'Délai', 'Chauffeur prévenu'];
+            const th = (<thead><tr style={{ background: '#e0e9f3', textAlign: 'left' }}>{tete.map(h => <th key={h} style={{ padding: '8px 12px', fontSize: '12px', color: '#555' }}>{h}</th>)}</tr></thead>);
+            return (<>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px', marginBottom: '22px' }}>{th}<tbody>
+                {!alApercu ? <tr><td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#999' }}>Chargement…</td></tr>
+                  : alApercu.aEnvoyer.length === 0 ? <tr><td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#2e7d32' }}>✓ Aucune nouvelle alerte à envoyer</td></tr>
+                  : alApercu.aEnvoyer.map(ligne)}</tbody></table>
+              <h3 style={{ color: BLEU, fontSize: '15px', margin: '0 0 8px' }}>Échéances à venir (hors seuils)</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px', marginBottom: '22px' }}>{th}<tbody>
+                {alApercu && alApercu.aVenir.length === 0 && <tr><td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#999' }}>Aucune</td></tr>}
+                {alApercu && alApercu.aVenir.slice(0, 40).map(ligne)}</tbody></table>
+            </>);
+          })()}
+          <h3 style={{ color: BLEU, fontSize: '15px', margin: '0 0 8px' }}>Journal des envois (100 derniers)</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '640px' }}>
+            <thead><tr style={{ background: '#e0e9f3', textAlign: 'left' }}>{['Envoyé le', 'Véhicule', 'Échéance', 'Date', 'Jours restants'].map(h => <th key={h} style={{ padding: '8px 12px', fontSize: '12px', color: '#555' }}>{h}</th>)}</tr></thead>
+            <tbody>
+              {alJournal.length === 0 && <tr><td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#999' }}>Aucun envoi pour le moment</td></tr>}
+              {alJournal.map((j, k) => (
+                <tr key={k} style={{ background: k % 2 ? 'white' : '#fafafa', borderBottom: '1px solid #eee', fontSize: '13px' }}>
+                  <td style={{ padding: '8px 12px' }}>{new Date(j.envoye_le).toLocaleString('fr-CA', { timeZone: 'America/Toronto' })}</td>
+                  <td style={{ padding: '8px 12px', fontWeight: 700, color: BLEU }}>{j.numero_unite}</td>
+                  <td style={{ padding: '8px 12px' }}>{LIBELLES[j.type_echeance] || j.type_echeance}</td>
+                  <td style={{ padding: '8px 12px' }}>{j.date_echeance}</td>
+                  <td style={{ padding: '8px 12px' }}>{j.jours_restants < 0 ? `retard ${-j.jours_restants} j` : `${j.jours_restants} j`}</td>
+                </tr>))}
+            </tbody>
+          </table>
+        </>)}
       </div>
 
       {/* Modal véhicule */}
