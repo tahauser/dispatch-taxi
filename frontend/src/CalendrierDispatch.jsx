@@ -241,6 +241,7 @@ export default function CalendrierDispatch({ onEnvoiIndividuel, onRefresh, date,
           { label: `${affectations.length} affectés`, color: '#2e7d32' },
           { label: `${nonAffectes.length} en attente`, color: nonAffectes.length > 0 ? '#c62828' : '#2e7d32' },
           { label: `${[...new Set(dispos.map(d => d.chauffeur_id))].length} dispos`, color: '#1565c0' },
+          { label: `${chauffeurs.length} chauffeurs${chauffeursAffiches.length !== chauffeurs.length ? ` (${chauffeursAffiches.length} affichés)` : ''}`, color: '#6a1b9a' },
         ].map(s => (
           <span key={s.label} style={{ background: 'white', border: `1px solid ${s.color}44`, color: s.color, padding: '3px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: '600' }}>{s.label}</span>
         ))}
