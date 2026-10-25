@@ -1,3 +1,4 @@
+const { chargerExigences, chargerFormations, verifier } = require('../services/conduite');
 const express = require('express');
 const pool    = require('../models/db');
 const { authMiddleware, requireRole } = require('../middleware/auth');
@@ -255,11 +256,14 @@ async function chevauchement(vehicule_id, chauffeur_id, debut, fin, ignorerId = 
 }
 
 async function creerAffectation({ vehicule_id, chauffeur_id, date_debut, date_fin, notes }, userId) {
-  const v = await pool.query('SELECT statut FROM vehicules WHERE id=$1', [vehicule_id]);
+  const v = await pool.query('SELECT statut, type_vehicule FROM vehicules WHERE id=$1', [vehicule_id]);
   if (!v.rows.length) return { erreur: 'Véhicule non trouvé', code: 404 };
   if (v.rows[0].statut !== 'actif') return { erreur: 'Ce véhicule n\'est pas en service', code: 409 };
-  const c = await pool.query(`SELECT actif FROM chauffeurs WHERE id=$1 AND role='chauffeur'`, [chauffeur_id]);
+  const c = await pool.query(`SELECT actif, categories_permis, permis_expiration::text AS permis_expiration FROM chauffeurs WHERE id=$1 AND role='chauffeur'`, [chauffeur_id]);
   if (!c.rows.length || !c.rows[0].actif) return { erreur: 'Chauffeur introuvable ou inactif', code: 409 };
+  const pbs = verifier(c.rows[0], v.rows[0].type_vehicule, date_debut, await chargerExigences(),
+                       (await chargerFormations([chauffeur_id]))[chauffeur_id] || []);
+  if (pbs.length) return { erreur: 'Chauffeur non conforme : ' + pbs.join(' ; '), code: 409 };
   if (date_fin && date_fin < date_debut) return { erreur: 'La date de fin précède la date de début', code: 400 };
   const conflit = await chevauchement(vehicule_id, chauffeur_id, date_debut, date_fin);
   if (conflit) return { erreur: conflit, code: 409 };
@@ -321,7 +325,8 @@ router.delete('/affectations/:id', authMiddleware, dispatch, async (req, res) =>
 // Score : +100 type identique (obligatoire), +50 a déjà conduit ce véhicule, +20 véhicule le plus récent (année).
 async function calculerProposition(date) {
   const ch = await pool.query(
-    `SELECT c.id, c.prenom, c.nom, c.numero_chauffeur, c.type_vehicule, c.photo
+    `SELECT c.id, c.prenom, c.nom, c.numero_chauffeur, c.type_vehicule, c.photo, c.categories_permis,
+            c.permis_expiration::text AS permis_expiration
      FROM chauffeurs c
      WHERE c.role='chauffeur' AND c.actif=TRUE
        AND NOT EXISTS (SELECT 1 FROM absences ab WHERE ab.chauffeur_id=c.id AND $1::date BETWEEN ab.date_debut AND ab.date_fin)
@@ -338,9 +343,12 @@ async function calculerProposition(date) {
   const hist = await pool.query(`SELECT DISTINCT chauffeur_id, vehicule_id FROM vehicule_affectations`);
   const dejaConduit = new Set(hist.rows.map(h => h.chauffeur_id + '|' + h.vehicule_id));
 
+  const exig = await chargerExigences();
+  const fm = await chargerFormations(null);
   const paires = [];
   for (const c of ch.rows) for (const v of ve.rows) {
     if ((c.type_vehicule || 'TAXI') !== v.type_vehicule) continue;
+    if (verifier(c, v.type_vehicule, date, exig, fm[c.id] || []).length) continue;
     const raisons = ['type ' + v.type_vehicule];
     let score = 100;
     if (dejaConduit.has(c.id + '|' + v.id)) { score += 50; raisons.push('a déjà conduit ce véhicule'); }

@@ -1,3 +1,4 @@
+const { chargerExigences, chargerFormations, verifier } = require('../services/conduite');
 const express  = require('express');
 const pool     = require('../models/db');
 const { authMiddleware, requireRole } = require('../middleware/auth');
@@ -54,7 +55,7 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
 
     const chauffeursRes = await pool.query(
       `SELECT c.id, c.numero_chauffeur, c.nom, c.prenom, c.type_vehicule,
-              c.lat_domicile, c.lng_domicile,
+              c.lat_domicile, c.lng_domicile, c.categories_permis, c.permis_expiration::text AS permis_expiration,
               json_agg(json_build_object('heure_debut',d.heure_debut,'heure_fin',d.heure_fin)) AS disponibilites
        FROM chauffeurs c
        JOIN disponibilites d ON d.chauffeur_id = c.id AND d.date_dispo = $1
@@ -62,8 +63,17 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
          AND NOT EXISTS (SELECT 1 FROM absences ab WHERE ab.chauffeur_id=c.id AND $1::date BETWEEN ab.date_debut AND ab.date_fin)
        GROUP BY c.id`, [date]
     );
+    // Exigences de conduite : écarte les chauffeurs non conformes pour leur type de véhicule
+    const exig = await chargerExigences(); const fm = await chargerFormations(null);
+    const nonConformes = [];
+    chauffeursRes.rows = chauffeursRes.rows.filter(c => {
+      const pb = verifier(c, c.type_vehicule || 'TAXI', date, exig, fm[c.id] || []);
+      if (pb.length) nonConformes.push(`${c.prenom} ${c.nom}: ${pb.join(' ; ')}`);
+      return !pb.length;
+    });
+    if (nonConformes.length) console.log('Chauffeurs écartés (conduite):', nonConformes);
     if (chauffeursRes.rows.length === 0)
-      return res.status(404).json({ message: 'Aucun chauffeur disponible' });
+      return res.status(404).json({ message: 'Aucun chauffeur disponible' + (nonConformes.length ? ' (non conformes : ' + nonConformes.length + ')' : '') });
 
     const { affectations, nonAffectes, details } = optimiserAffectations(trajetsRes.rows, chauffeursRes.rows);
 
@@ -88,7 +98,7 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
     const msg = sauvegardes > 0
       ? `${sauvegardes} nouvelle(s) affectation(s)${ignorees>0?' ('+ignorees+' conservées)':''}${raisonMsg}`
       : `Aucune nouvelle affectation${raisonMsg}`;
-    res.json({ message: msg, affectations: sauvegardes, non_affectes: nonAffectes });
+    res.json({ message: msg + (nonConformes.length ? ` — ${nonConformes.length} chauffeur(s) écarté(s) (exigences de conduite)` : ''), affectations: sauvegardes, non_affectes: nonAffectes, ecartes: nonConformes });
   } catch (err) {
     console.error('Erreur proposer:', err.message);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -332,6 +342,13 @@ router.post('/affecter', authMiddleware, requireRole('dispatch','admin'), async 
        WHERE chauffeur_id=$1 AND $2::date BETWEEN date_debut AND date_fin LIMIT 1`, [chauffeur_id, date]);
     if (abs.rows.length)
       return res.status(409).json({ message: `Chauffeur absent (${abs.rows[0].type}) du ${abs.rows[0].d} au ${abs.rows[0].f}` });
+    const info = await pool.query(
+      `SELECT t.type_vehicule AS tv, c.categories_permis, c.permis_expiration::text AS permis_expiration
+       FROM trajets t, chauffeurs c WHERE t.id=$1 AND c.id=$2`, [trajet_id, chauffeur_id]);
+    if (info.rows[0]?.tv) {
+      const pb = verifier(info.rows[0], info.rows[0].tv, date, await chargerExigences(), (await chargerFormations([chauffeur_id]))[chauffeur_id] || []);
+      if (pb.length) return res.status(409).json({ message: 'Chauffeur non conforme : ' + pb.join(' ; ') });
+    }
     const result = await pool.query(
       `INSERT INTO affectations (trajet_id, chauffeur_id, date_programme, proposee_par, statut)
        VALUES ($1,$2,$3,'dispatch','proposee')

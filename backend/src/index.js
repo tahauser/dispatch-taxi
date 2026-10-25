@@ -125,6 +125,23 @@ async function runMigrations() {
   )`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_absences_ch ON absences(chauffeur_id, date_debut, date_fin)`);
 
+  await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS permis_expiration DATE`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS exigences_conduite (
+    type_vehicule VARCHAR(20) PRIMARY KEY,
+    categories    TEXT NOT NULL DEFAULT '',
+    formation     TEXT NOT NULL DEFAULT ''
+  )`);
+  await pool.query(`INSERT INTO exigences_conduite (type_vehicule, categories, formation) VALUES
+      ('TAXI','',''),('BERLINE','',''),('VAN','',''),('MINIBUS','','') ON CONFLICT DO NOTHING`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS chauffeur_formations (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    chauffeur_id    UUID NOT NULL REFERENCES chauffeurs(id) ON DELETE CASCADE,
+    nom             VARCHAR(120) NOT NULL,
+    date_obtention  DATE,
+    date_expiration DATE,
+    cree_le         TIMESTAMP DEFAULT NOW()
+  )`);
+
   // Statut de course + preuve de service
   for (const ddl of [
     `ADD COLUMN IF NOT EXISTS statut_course VARCHAR(20) NOT NULL DEFAULT 'a_faire'`,
@@ -153,6 +170,7 @@ app.use('/api/disponibilites', require('./routes/disponibilites'));
 app.use('/api/chauffeurs',     require('./routes/chauffeurs'));
 app.use('/api/vehicules',      require('./routes/vehicules'));
 app.use('/api/absences',       require('./routes/absences'));
+app.use('/api/conduite',       require('./routes/conduite'));
 app.use('/api/affectations',   require('./routes/affectations'));
 app.use('/api/consultation',   require('./routes/consultation'));
 app.use('/api/routes',         require('./routes/routes'));

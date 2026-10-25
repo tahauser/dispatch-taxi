@@ -1,3 +1,4 @@
+import ExigencesConduite from './ExigencesConduite';
 import { useState, useEffect, useCallback } from 'react';
 import api from './api';
 import Avatar from './Avatar';
@@ -236,7 +237,7 @@ export default function GestionParc() {
       (!fa.etat || etat === fa.etat) && (!fa.type || a.type_vehicule === fa.type);
   });
 
-  const tabs = [['vehicules', '🚗 Véhicules'], ['affectations', '🔗 Affectations'], ['proposition', '✨ Proposition'], ['inspections', '🔍 Inspections'], ['alertes', '🔔 Alertes']];
+  const tabs = [['vehicules', '🚗 Véhicules'], ['affectations', '🔗 Affectations'], ['proposition', '✨ Proposition'], ['inspections', '🔍 Inspections'], ['alertes', '🔔 Alertes'], ['conduite', '🪪 Conduite']];
 
   return (
     <div>
@@ -491,6 +492,8 @@ export default function GestionParc() {
         })()}
 
         {/* ───────── Alertes ───────── */}
+        {onglet === 'conduite' && <ExigencesConduite />}
+
         {onglet === 'alertes' && alParams && (<>
           <form onSubmit={sauverParams} style={{ background: '#f5f8fc', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
             <h3 style={{ color: BLEU, fontSize: '15px', margin: '0 0 12px' }}>Paramètres des alertes</h3>

@@ -46,7 +46,8 @@ router.get('/me', authMiddleware, async (req, res) => {
     const result = await pool.query(
       `SELECT id, numero_chauffeur, nom, prenom, email, role,
               telephone, adresse_domicile, type_vehicule, actif,
-              date_naissance::text AS date_naissance, numero_permis, categories_permis, photo
+              date_naissance::text AS date_naissance, numero_permis, categories_permis, photo,
+              permis_expiration::text AS permis_expiration
        FROM chauffeurs WHERE id = $1`, [req.user.id]
     );
     if (result.rows.length === 0)
