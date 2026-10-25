@@ -120,4 +120,22 @@ async function envoyerAucuneDisponibilite(chauffeur, date) {
   console.log(`Email aucune dispo envoye a ${chauffeur.email}`);
 }
 
-module.exports = { envoyerProgramme, envoyerAucunTrajet, envoyerAucuneDisponibilite, genererTokenConsultation };
+async function envoyerResetMdp(chauffeur, token) {
+  const lien = `${APP_URL}/reset/${token}`;
+  const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+    <div style="background:#1F4E79;padding:20px;border-radius:8px 8px 0 0;"><h1 style="color:white;margin:0;">Dispatch Taxi</h1></div>
+    <div style="background:#f8f9fa;padding:20px;border-left:4px solid #1F4E79;">
+      <p>Bonjour <strong>${chauffeur.prenom} ${chauffeur.nom}</strong>,</p>
+      <p>Une réinitialisation de votre mot de passe a été demandée. Ce lien est valide <strong>1 heure</strong> :</p>
+      <p><a href="${lien}" style="background:#1F4E79;color:white;padding:10px 18px;border-radius:6px;text-decoration:none;">Choisir un nouveau mot de passe</a></p>
+      <p style="font-size:12px;color:#666;">Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>
+    </div></body></html>`;
+  await transporter.sendMail({
+    from: `"Dispatch Taxi" <${process.env.EMAIL_FROM}>`,
+    to: chauffeur.email,
+    subject: 'Réinitialisation de votre mot de passe — Dispatch Taxi',
+    html
+  });
+}
+
+module.exports = { envoyerResetMdp, envoyerProgramme, envoyerAucunTrajet, envoyerAucuneDisponibilite, genererTokenConsultation };

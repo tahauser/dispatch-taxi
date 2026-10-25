@@ -3,6 +3,7 @@ import Login from './Login';
 import Dashboard from './Dashboard';
 import PortailChauffeur from './PortailChauffeur';
 import ConsultationPage from './ConsultationPage';
+import ResetPassword from './ResetPassword';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -22,6 +23,8 @@ export default function App() {
 
   // Détection route /consultation/:token
   const path = window.location.pathname;
+  const resetMatch = path.match(/^\/reset\/([A-Za-z0-9]+)$/);
+  if (resetMatch) return <ResetPassword token={resetMatch[1]} />;
   const consultMatch = path.match(/^\/consultation\/(.+)$/);
   if (consultMatch) {
     const token = consultMatch[1];

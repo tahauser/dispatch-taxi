@@ -23,6 +23,13 @@ async function runMigrations() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_consultation_logs_chauffeur ON consultation_logs(chauffeur_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_consultation_logs_date ON consultation_logs(date_programme)`);
 
+  // Fiche chauffeur + réinitialisation du mot de passe
+  await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS date_naissance DATE`);
+  await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS numero_permis VARCHAR(50)`);
+  await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS categories_permis VARCHAR(100)`);
+  await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS reset_token_hash TEXT`);
+  await pool.query(`ALTER TABLE chauffeurs ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP`);
+
   console.log('Migrations OK');
 }
 runMigrations().catch(err => console.error('Migration error:', err.message));

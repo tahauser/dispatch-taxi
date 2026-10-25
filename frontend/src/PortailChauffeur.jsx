@@ -3,6 +3,7 @@ import CalendrierProgramme from './CalendrierProgramme';
 import CalendrierProgrammeMobile from './CalendrierProgrammeMobile';
 import CalendrierDispo from './CalendrierDispo';
 import CalendrierDispoMobile from './CalendrierDispoMobile';
+import ProfilChauffeur from './ProfilChauffeur';
 import useIsMobile from './hooks/useIsMobile';
 
 const BLEU = '#1F4E79';
@@ -47,6 +48,7 @@ export default function PortailChauffeur({ user, onLogout }) {
           paddingBottom:'calc(72px + env(safe-area-inset-bottom))' }}>
           {onglet === 'programme'      && <CalendrierProgrammeMobile user={user} />}
           {onglet === 'disponibilites' && <CalendrierDispoMobile user={user} onDirtyChange={setDisposDirty} />}
+          {onglet === 'profil'         && <ProfilChauffeur user={user} />}
         </div>
 
         {/* Navigation bas */}
@@ -62,6 +64,7 @@ export default function PortailChauffeur({ user, onLogout }) {
           {[
             { id:'programme',      icon:'📅', label:'Mon programme' },
             { id:'disponibilites', icon:'🕐', label:'Mes dispos' },
+            { id:'profil',         icon:'👤', label:'Mon profil' },
           ].map(o => (
             <button key={o.id} onClick={() => changerOnglet(o.id)}
               style={{
@@ -115,6 +118,7 @@ export default function PortailChauffeur({ user, onLogout }) {
           {[
             { id:'programme',      label:'📅  Mon programme' },
             { id:'disponibilites', label:'🕐  Mes disponibilités' },
+            { id:'profil',         label:'👤  Mon profil' },
           ].map(o => (
             <button key={o.id} onClick={() => changerOnglet(o.id)}
               style={{ padding:'10px 24px', border:'none', borderRadius:'6px 6px 0 0',
@@ -135,6 +139,7 @@ export default function PortailChauffeur({ user, onLogout }) {
           boxShadow:'0 2px 8px rgba(0,0,0,0.08)', padding:'24px' }}>
           {onglet === 'programme'      && <CalendrierProgramme user={user} />}
           {onglet === 'disponibilites' && <CalendrierDispo user={user} onDirtyChange={setDisposDirty} />}
+          {onglet === 'profil'         && <ProfilChauffeur user={user} />}
         </div>
       </div>
     </div>
