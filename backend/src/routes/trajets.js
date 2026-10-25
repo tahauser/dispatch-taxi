@@ -178,6 +178,9 @@ router.post('/import-excel', authMiddleware, requireRole('dispatch','admin'), up
         const clientPrenom = col(row, 'Client Prénom', 'Client Prenom', 'Client_Prenom', 'PRENOM');
         const codeTaxi     = col(row, 'Code taxi affecté', 'Code taxi affecte', 'Code_taxi_affecte');
         const statutExo    = col(row, 'Statut', 'STATUT') || 'en_attente';
+        const payeur       = String(col(row, 'Payeur', 'PAYEUR', 'Client payeur') || 'EXO').trim().slice(0, 60) || 'EXO';
+        const distRaw      = parseFloat(String(col(row, 'Distance km', 'Distance_km', 'Distance', 'DISTANCE') || '').replace(',', '.'));
+        const distanceKm   = Number.isFinite(distRaw) && distRaw > 0 ? distRaw : null;
 
         // Build notes field
         const noteParts = [];
@@ -198,14 +201,14 @@ router.post('/import-excel', authMiddleware, requireRole('dispatch','admin'), up
           `INSERT INTO trajets
              (code_trajet, date_trajet, heure_prise, heure_arrivee, type_vehicule,
               adresse_prise, lat_prise, lng_prise,
-              adresse_arrivee, lat_arrivee, lng_arrivee, code_fixe, notes, statut)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+              adresse_arrivee, lat_arrivee, lng_arrivee, code_fixe, notes, statut, payeur, distance_km)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
            ON CONFLICT (code_trajet) DO NOTHING
            RETURNING id`,
           [codeTrajet, dateTrajet, heurePrise, heureArrivee, typeVehicule.toUpperCase(),
            adrPriseFinale, coordsPrise?.lat ?? null, coordsPrise?.lng ?? null,
            adresseDest || null, coordsArrivee?.lat ?? null, coordsArrivee?.lng ?? null,
-           codeTaxi || null, notes, statutNorm]
+           codeTaxi || null, notes, statutNorm, payeur, distanceKm]
         );
         if (r.rowCount > 0) importes++; else doublons++;
       } catch (err) {

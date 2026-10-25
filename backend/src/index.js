@@ -176,6 +176,23 @@ async function runMigrations() {
     PRIMARY KEY (chauffeur_id, date_cible, canal)
   )`);
 
+  await pool.query(`ALTER TABLE trajets ADD COLUMN IF NOT EXISTS payeur VARCHAR(60) NOT NULL DEFAULT 'EXO'`);
+  await pool.query(`ALTER TABLE trajets ADD COLUMN IF NOT EXISTS distance_km NUMERIC(8,2)`);
+  await pool.query(`ALTER TABLE affectations ADD COLUMN IF NOT EXISTS montant_ajuste NUMERIC(10,2)`);
+  await pool.query(`ALTER TABLE affectations ADD COLUMN IF NOT EXISTS note_facturation TEXT`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS tarifs (
+    payeur           VARCHAR(60) PRIMARY KEY,
+    mode             VARCHAR(10) NOT NULL DEFAULT 'distance',
+    prise_en_charge  NUMERIC(8,2) NOT NULL DEFAULT 0,
+    prix_km          NUMERIC(8,3) NOT NULL DEFAULT 0,
+    prix_minute      NUMERIC(8,3) NOT NULL DEFAULT 0,
+    forfait          NUMERIC(8,2) NOT NULL DEFAULT 0,
+    minimum          NUMERIC(8,2) NOT NULL DEFAULT 0,
+    taxes_pct        NUMERIC(6,3) NOT NULL DEFAULT 0,
+    facturer_absence BOOLEAN NOT NULL DEFAULT FALSE
+  )`);
+  await pool.query(`INSERT INTO tarifs (payeur) VALUES ('EXO') ON CONFLICT DO NOTHING`);
+
   // Statut de course + preuve de service
   for (const ddl of [
     `ADD COLUMN IF NOT EXISTS statut_course VARCHAR(20) NOT NULL DEFAULT 'a_faire'`,
@@ -206,6 +223,7 @@ app.use('/api/vehicules',      require('./routes/vehicules'));
 app.use('/api/absences',       require('./routes/absences'));
 app.use('/api/conduite',       require('./routes/conduite'));
 app.use('/api/couts',          require('./routes/couts'));
+app.use('/api/facturation',    require('./routes/facturation'));
 app.use('/api/rappels-dispo',  require('./routes/rappelsDispo'));
 app.use('/api/affectations',   require('./routes/affectations'));
 app.use('/api/consultation',   require('./routes/consultation'));
