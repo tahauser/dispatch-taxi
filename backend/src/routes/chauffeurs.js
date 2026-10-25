@@ -12,7 +12,7 @@ router.get('/', authMiddleware, requireRole('dispatch','admin'), async (req, res
     const result = await pool.query(
       `SELECT id, numero_chauffeur, nom, prenom, email, telephone,
               type_vehicule, actif, adresse_domicile, lat_domicile, lng_domicile, role,
-              date_naissance, numero_permis, categories_permis
+              date_naissance, numero_permis, categories_permis, photo
        FROM chauffeurs
        WHERE role = 'chauffeur' ${filtre}
        ORDER BY numero_chauffeur`

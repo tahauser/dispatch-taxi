@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from './api';
+import Avatar from './Avatar';
 
 const BLEU = '#1F4E79';
 const input = { width:'100%', padding:'10px 12px', border:'1px solid #ddd', borderRadius:'6px', fontSize:'14px', boxSizing:'border-box' };
@@ -111,11 +112,7 @@ export default function ProfilChauffeur({ user }) {
           {user.prenom} {user.nom} · N° {user.numero_chauffeur}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'18px' }}>
-          {photo
-            ? <img src={photo} alt="Photo" style={{ width:'96px', height:'96px', borderRadius:'50%', objectFit:'cover', border:`2px solid ${BLEU}` }} />
-            : <div style={{ width:'96px', height:'96px', borderRadius:'50%', background:'#e3edf7', color:BLEU, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'34px', fontWeight:700 }}>
-                {(user.prenom?.[0] || '') + (user.nom?.[0] || '')}
-              </div>}
+          <Avatar ch={{ ...user, photo }} size={96} style={{ border:`2px solid ${BLEU}` }} />
           <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
             <label style={{ ...btn, display:'inline-block', textAlign:'center', cursor:'pointer' }}>
               📷 {photo ? 'Changer la photo' : 'Ajouter une photo'}

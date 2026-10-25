@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
+import Avatar from './Avatar';
 import CarteTrajetsChauffeur from './CarteTrajetsChauffeur';
 
 const BLEU = '#1F4E79';
@@ -274,7 +275,9 @@ export default function GestionChauffeurs() {
             ) : chauffeurs.map((c, i) => (
               <tr key={c.id} style={{ background: !c.actif ? '#fff8f8' : i%2===0 ? '#fafafa' : 'white',
                 borderBottom:'1px solid #eee', opacity: c.actif ? 1 : 0.7 }}>
-                <td style={{ padding:'10px 14px', fontWeight:'700', color:BLEU }}>{c.numero_chauffeur}</td>
+                <td style={{ padding:'10px 14px', fontWeight:'700', color:BLEU }}>
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:'8px' }}><Avatar ch={c} size={32} />{c.numero_chauffeur}</span>
+                </td>
                 <td style={{ padding:'10px 14px', fontWeight:'600' }}>{c.nom}</td>
                 <td style={{ padding:'10px 14px' }}>{c.prenom}</td>
                 <td style={{ padding:'10px 14px', color:'#555' }}>{c.email}</td>
