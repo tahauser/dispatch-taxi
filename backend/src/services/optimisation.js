@@ -300,4 +300,4 @@ function optimiserAffectations(trajets, chauffeurs) {
   return { affectations, nonAffectes, details, deadRunKm, deadRunAvantKm };
 }
 
-module.exports = { optimiserAffectations, distanceKm, toMinutes, deadRunTotal };
+module.exports = { optimiserAffectations, distanceKm, toMinutes, deadRunTotal, deadRunSequence };

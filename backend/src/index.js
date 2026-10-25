@@ -224,6 +224,7 @@ app.use('/api/absences',       require('./routes/absences'));
 app.use('/api/conduite',       require('./routes/conduite'));
 app.use('/api/couts',          require('./routes/couts'));
 app.use('/api/facturation',    require('./routes/facturation'));
+app.use('/api/kpi',            require('./routes/kpi'));
 app.use('/api/rappels-dispo',  require('./routes/rappelsDispo'));
 app.use('/api/affectations',   require('./routes/affectations'));
 app.use('/api/consultation',   require('./routes/consultation'));

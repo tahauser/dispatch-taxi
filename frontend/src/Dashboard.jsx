@@ -7,6 +7,7 @@ import GestionParc from './GestionParc';
 import GestionAbsences from './GestionAbsences';
 import RappelsDispo from './RappelsDispo';
 import Facturation from './Facturation';
+import TableauKpi from './TableauKpi';
 import { BadgeStatut, PreuveModal } from './EtapesCourse';
 import useIsMobile from './hooks/useIsMobile';
 import { useState, useEffect, useRef } from 'react';
@@ -190,6 +191,7 @@ export default function Dashboard({ user, onLogout }) {
     { id:'absences',   label:'🏖️ Absences' },
     { id:'parc',       label:'🚗 Parc' },
     { id:'facturation', label:'💵 Facturation' },
+    { id:'kpi',        label:'📈 KPI' },
     { id:'rapports',   label:'📊 Rapports' },
     { id:'parametres', label:'👤 Mon profil' },
   ];
@@ -346,6 +348,7 @@ export default function Dashboard({ user, onLogout }) {
           {section==='absences' && <GestionAbsences />}
           {section==='parc' && <GestionParc />}
           {section==='facturation' && <Facturation />}
+          {section==='kpi' && <TableauKpi />}
 
           {/* ===== Section Rapports / Accusés de réception ===== */}
           {section==='rapports' && <AccusesReception />}

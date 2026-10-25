@@ -47,9 +47,10 @@ function calculer(l, t) {
   return { km, km_estime: kmEstime, minutes, calcule, montant };
 }
 
-async function construireReleve({ mois, payeur, inclure }) {
-  const debut = `${mois}-01`;
-  const params = [debut, payeur || null];
+async function construireReleve({ mois, du, au, payeur, inclure }) {
+  // Soit un mois (AAAA-MM), soit une période [du, au] inclusive
+  const debut = du || `${mois}-01`;
+  const params = [debut, payeur || null, au || null];
   const where = inclure === 'toutes'
     ? `a.statut_course IN ('termine','no_show','a_faire','arrive','a_bord','en_route')`
     : `a.statut_course IN ('termine','no_show')`;
@@ -61,7 +62,7 @@ async function construireReleve({ mois, payeur, inclure }) {
             t.distance_km::float AS distance_km, t.payeur,
             c.prenom, c.nom, c.numero_chauffeur
      FROM affectations a JOIN trajets t ON t.id=a.trajet_id JOIN chauffeurs c ON c.id=a.chauffeur_id
-     WHERE a.date_programme >= $1::date AND a.date_programme < ($1::date + INTERVAL '1 month')
+     WHERE a.date_programme >= $1::date AND a.date_programme < (CASE WHEN $3::date IS NULL THEN $1::date + INTERVAL '1 month' ELSE $3::date + 1 END)
        AND ($2::text IS NULL OR t.payeur=$2) AND ${where}
      ORDER BY t.payeur, a.date_programme, t.heure_prise`, params);
   const tarifs = {};
@@ -166,3 +167,4 @@ router.put('/tarifs/:payeur', authMiddleware, dispatch, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.construireReleve = construireReleve;
