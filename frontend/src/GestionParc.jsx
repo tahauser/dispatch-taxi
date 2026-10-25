@@ -33,6 +33,28 @@ function alertes(v) {
   return l;
 }
 
+const norm = (x) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const contient = (champs, q) => !q.trim() || norm(champs.join(' ')).includes(norm(q).trim());
+
+function Filtres({ q, setQ, placeholder, selects = [], total, affiche, onReset }) {
+  const actif = q || selects.some(s => s.value);
+  return (
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '12px', background: '#f5f8fc', padding: '8px 10px', borderRadius: '8px' }}>
+      <input value={q} onChange={e => setQ(e.target.value)} placeholder={'🔍 ' + placeholder}
+        style={{ padding: '7px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', minWidth: '230px', flex: '1 1 230px', maxWidth: '360px' }} />
+      {selects.map(sel => (
+        <select key={sel.label} value={sel.value} onChange={e => sel.set(e.target.value)} title={sel.label}
+          style={{ padding: '7px 10px', border: `1px solid ${sel.value ? BLEU : '#ddd'}`, borderRadius: '6px', fontSize: '13px', background: sel.value ? '#e3edf7' : 'white' }}>
+          <option value="">{sel.label} : tous</option>
+          {sel.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      ))}
+      {actif && <button onClick={onReset} style={{ background: 'none', border: 'none', color: '#c62828', cursor: 'pointer', fontSize: '12px' }}>✕ Effacer</button>}
+      <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#666' }}>{affiche} / {total}</span>
+    </div>
+  );
+}
+
 const btn = (bg, color) => ({ background: bg, color, border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' });
 const inp = { width: '100%', padding: '9px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' };
 const lbl = { display: 'block', marginBottom: '5px', fontWeight: 500, color: '#333', fontSize: '13px' };
@@ -62,6 +84,9 @@ export default function GestionParc() {
   const [inspections, setInspections] = useState([]);
   const [modalI, setModalI] = useState(null);
   const [filtreV, setFiltreV] = useState('');
+  const [fv, setFv] = useState({ q: '', type: '', statut: '', occ: '', alerte: '' });
+  const [fa, setFa] = useState({ q: '', etat: '', type: '' });
+  const [fi, setFi] = useState({ q: '', resultat: '', etat: '', type: '' });
   const [prop, setProp] = useState(null);
   const [datePropo, setDatePropo] = useState(aujourdhui());
   const [choix, setChoix] = useState({});
@@ -158,6 +183,17 @@ export default function GestionParc() {
   const nbLibres = vehicules.filter(v => v.statut === 'actif' && !v.aff_id).length;
   const nbAlertes = vehicules.filter(v => alertes(v).length).length;
 
+  const vehFiltres = vehicules.filter(v =>
+    contient([v.numero_unite, v.immatriculation, v.marque, v.modele, v.couleur, v.annee, v.ch_prenom, v.ch_nom, v.ch_numero], fv.q) &&
+    (!fv.type || v.type_vehicule === fv.type) && (!fv.statut || v.statut === fv.statut) &&
+    (!fv.occ || (fv.occ === 'libre' ? (v.statut === 'actif' && !v.aff_id) : !!v.aff_id)) &&
+    (!fv.alerte || ((alertes(v).length > 0) === (fv.alerte === 'oui'))));
+  const affFiltrees = affectations.filter(a => {
+    const etat = a.en_cours ? 'en_cours' : (a.date_debut > aujourdhui() ? 'a_venir' : 'terminee');
+    return contient([a.numero_unite, a.immatriculation, a.marque, a.modele, a.prenom, a.nom, a.numero_chauffeur], fa.q) &&
+      (!fa.etat || etat === fa.etat) && (!fa.type || a.type_vehicule === fa.type);
+  });
+
   const tabs = [['vehicules', '🚗 Véhicules'], ['affectations', '🔗 Affectations'], ['proposition', '✨ Proposition'], ['inspections', '🔍 Inspections']];
 
   return (
@@ -183,13 +219,21 @@ export default function GestionParc() {
             <button onClick={charger} style={{ ...btn('white', '#555'), border: '1px solid #ddd', padding: '9px 14px', fontSize: '14px' }}>Actualiser</button>
             <span style={{ color: '#666', fontSize: '13px' }}>{vehicules.length} véhicules · {nbLibres} libre(s){nbAlertes > 0 && ` · ⚠️ ${nbAlertes} avec échéance`}</span>
           </div>
+          <Filtres q={fv.q} setQ={q => setFv(f => ({ ...f, q }))} placeholder="Unité, plaque, marque, modèle, chauffeur…"
+            total={vehicules.length} affiche={vehFiltres.length} onReset={() => setFv({ q: '', type: '', statut: '', occ: '', alerte: '' })}
+            selects={[
+              { label: 'Type', value: fv.type, set: v => setFv(f => ({ ...f, type: v })), options: TYPES.map(t => [t, t]) },
+              { label: 'Statut', value: fv.statut, set: v => setFv(f => ({ ...f, statut: v })), options: Object.entries(STATUTS) },
+              { label: 'Affectation', value: fv.occ, set: v => setFv(f => ({ ...f, occ: v })), options: [['libre', 'Libres'], ['affecte', 'Affectés']] },
+              { label: 'Échéances', value: fv.alerte, set: v => setFv(f => ({ ...f, alerte: v })), options: [['oui', 'Avec alerte'], ['non', 'Sans alerte']] },
+            ]} />
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '980px' }}>
             <thead><tr style={{ background: BLEU, color: 'white', textAlign: 'left' }}>
               {['Unité', 'Immat.', 'Véhicule', 'Type', 'Km', 'Statut', 'Chauffeur actuel', 'Échéances', 'Actions'].map(h => <th key={h} style={{ padding: '12px 12px', fontSize: '13px' }}>{h}</th>)}
             </tr></thead>
             <tbody>
-              {vehicules.length === 0 && <tr><td colSpan="9" style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Aucun véhicule — ajoutez le premier</td></tr>}
-              {vehicules.map((v, i) => {
+              {vehFiltres.length === 0 && <tr><td colSpan="9" style={{ padding: '40px', textAlign: 'center', color: '#999' }}>{vehicules.length === 0 ? 'Aucun véhicule — ajoutez le premier' : 'Aucun véhicule ne correspond aux filtres'}</td></tr>}
+              {vehFiltres.map((v, i) => {
                 const actif = v.statut === 'actif';
                 const [bg, col] = STATUT_COULEUR[v.statut] || STATUT_COULEUR.actif;
                 return (
@@ -226,14 +270,20 @@ export default function GestionParc() {
         </>)}
 
         {/* ───────── Affectations ───────── */}
-        {onglet === 'affectations' && (
+        {onglet === 'affectations' && (<>
+          <Filtres q={fa.q} setQ={q => setFa(f => ({ ...f, q }))} placeholder="Véhicule, chauffeur, marque…"
+            total={affectations.length} affiche={affFiltrees.length} onReset={() => setFa({ q: '', etat: '', type: '' })}
+            selects={[
+              { label: 'État', value: fa.etat, set: v => setFa(f => ({ ...f, etat: v })), options: [['en_cours', 'En cours'], ['a_venir', 'À venir'], ['terminee', 'Terminées']] },
+              { label: 'Type', value: fa.type, set: v => setFa(f => ({ ...f, type: v })), options: TYPES.map(t => [t, t]) },
+            ]} />
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px' }}>
             <thead><tr style={{ background: BLEU, color: 'white', textAlign: 'left' }}>
               {['Véhicule', 'Chauffeur', 'Du', 'Au', 'État', 'Actions'].map(h => <th key={h} style={{ padding: '12px', fontSize: '13px' }}>{h}</th>)}
             </tr></thead>
             <tbody>
-              {affectations.length === 0 && <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Aucune affectation</td></tr>}
-              {affectations.map((a, i) => (
+              {affFiltrees.length === 0 && <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#999' }}>{affectations.length === 0 ? 'Aucune affectation' : 'Aucune affectation ne correspond aux filtres'}</td></tr>}
+              {affFiltrees.map((a, i) => (
                 <tr key={a.id} style={{ background: i % 2 ? 'white' : '#fafafa', borderBottom: '1px solid #eee', color: a.en_cours ? undefined : '#888' }}>
                   <td style={{ padding: '10px 12px' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><VehiculeIcon type={a.type_vehicule} size={20} /><b style={{ color: BLEU }}>{a.numero_unite}</b> <span style={{ fontSize: '12px', color: '#777' }}>{a.marque} {a.modele}</span></span></td>
                   <td style={{ padding: '10px 12px' }}>{a.prenom} {a.nom} <span style={{ color: '#999', fontSize: '12px' }}>N°{a.numero_chauffeur}</span></td>
@@ -250,7 +300,7 @@ export default function GestionParc() {
               ))}
             </tbody>
           </table>
-        )}
+        </>)}
 
         {/* ───────── Proposition ───────── */}
         {onglet === 'proposition' && (<>
@@ -304,7 +354,21 @@ export default function GestionParc() {
           const auj = aujourdhui();
           const enRetard = vehicules.filter(v => v.statut === 'actif' && (!v.insp_date || (v.insp_prochaine && v.insp_prochaine < auj)));
           const bientot = vehicules.filter(v => v.statut === 'actif' && v.insp_prochaine && v.insp_prochaine >= auj && joursAvant(v.insp_prochaine) <= 30);
-          const hist = inspections.filter(i => !filtreV || i.vehicule_id === filtreV);
+          const etatInsp = (v) => {
+            const j = joursAvant(v.insp_prochaine);
+            if (v.statut !== 'actif') return 'hors';
+            if (!v.insp_date) return 'jamais';
+            if (j !== null && j < 0) return 'retard';
+            if (j !== null && j <= 30) return 'bientot';
+            return 'ajour';
+          };
+          const suiviFiltre = vehicules.filter(v =>
+            contient([v.numero_unite, v.immatriculation, v.marque, v.modele], fi.q) &&
+            (!fi.type || v.type_vehicule === fi.type) && (!fi.etat || etatInsp(v) === fi.etat) &&
+            (!fi.resultat || v.insp_resultat === fi.resultat));
+          const hist = inspections.filter(i => (!filtreV || i.vehicule_id === filtreV) &&
+            contient([i.numero_unite, i.immatriculation, i.marque, i.modele, i.inspecteur, i.notes, TYPES_INSP[i.type_inspection]], fi.q) &&
+            (!fi.type || i.type_vehicule === fi.type) && (!fi.resultat || i.resultat === fi.resultat));
           const nouvelle = (vid = '') => setModalI({ ...INSP_VIDE, vehicule_id: vid, date_inspection: auj, checklist: { ...INSP_VIDE.checklist } });
           return (<>
             <div style={{ display: 'flex', gap: '12px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -315,13 +379,20 @@ export default function GestionParc() {
                 {bientot.length} à faire sous 30 jours</span>
             </div>
 
+            <Filtres q={fi.q} setQ={q => setFi(f => ({ ...f, q }))} placeholder="Véhicule, plaque, inspecteur, notes…"
+              total={vehicules.length} affiche={suiviFiltre.length} onReset={() => setFi({ q: '', resultat: '', etat: '', type: '' })}
+              selects={[
+                { label: 'État', value: fi.etat, set: v => setFi(f => ({ ...f, etat: v })), options: [['retard', 'En retard'], ['jamais', 'Jamais inspecté'], ['bientot', 'Sous 30 jours'], ['ajour', 'À jour'], ['hors', 'Hors service']] },
+                { label: 'Résultat', value: fi.resultat, set: v => setFi(f => ({ ...f, resultat: v })), options: Object.entries(RESULTATS).map(([k, [l]]) => [k, l]) },
+                { label: 'Type', value: fi.type, set: v => setFi(f => ({ ...f, type: v })), options: TYPES.map(t => [t, t]) },
+              ]} />
             <h3 style={{ color: BLEU, fontSize: '15px', margin: '0 0 8px' }}>Suivi par véhicule</h3>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '760px', marginBottom: '24px' }}>
               <thead><tr style={{ background: BLEU, color: 'white', textAlign: 'left' }}>
                 {['Véhicule', 'Dernière inspection', 'Résultat', 'Prochaine', 'État', ''].map(h => <th key={h} style={{ padding: '10px 12px', fontSize: '13px' }}>{h}</th>)}
               </tr></thead>
               <tbody>
-                {vehicules.map((v, i) => {
+                {suiviFiltre.map((v, i) => {
                   const j = joursAvant(v.insp_prochaine);
                   const etat = v.statut !== 'actif' ? ['Hors service', '#888', '#f0f0f0']
                     : !v.insp_date ? ['Jamais inspecté', '#c62828', '#fce4ec']
