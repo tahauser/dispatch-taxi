@@ -47,7 +47,8 @@ router.post('/proposer', authMiddleware, requireRole('dispatch','admin'), async 
       `SELECT id, code_trajet, heure_prise, heure_arrivee,
               type_vehicule, adresse_prise, lat_prise, lng_prise,
               adresse_arrivee, lat_arrivee, lng_arrivee
-       FROM trajets WHERE date_trajet = $1 AND statut = 'en_attente'
+       FROM trajets t WHERE date_trajet = $1 AND statut = 'en_attente'
+         AND NOT EXISTS (SELECT 1 FROM affectations a WHERE a.trajet_id=t.id)
        ORDER BY heure_prise`, [date]
     );
     if (trajetsRes.rows.length === 0)

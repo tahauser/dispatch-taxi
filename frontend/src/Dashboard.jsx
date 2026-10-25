@@ -51,6 +51,8 @@ export default function Dashboard({ user, onLogout }) {
   const msgTimer = useRef(null);
   const [refreshKey, setRefreshKey]   = useState(0);
   const [dejaPropose, setDejaPropose] = useState(false);
+  const idsAffectes = new Set(affectations.map(a => a.trajet_id));
+  const aucunRestant = trajets.length === 0 || trajets.every(t => idsAffectes.has(t.id));
   const [dejaEnvoye, setDejaEnvoye] = useState(false);
 
   // Import Excel
@@ -261,11 +263,11 @@ export default function Dashboard({ user, onLogout }) {
             <button onClick={() => { const d=new Date(date); d.setDate(d.getDate()+1); setDate(d.toISOString().split('T')[0]); }}
               style={{ padding:'8px 12px', background:'white', border:'1px solid #ddd', borderRadius:'6px', cursor:'pointer', fontSize:'18px' }}>›</button>
 
-            <button onClick={proposerAffectations} disabled={loading || dejaPropose || trajets.length === 0}
-              style={{ padding:'8px 16px', background: (dejaPropose || trajets.length === 0) ? '#e0e0e0' : '#2E75B6',
-                color: (dejaPropose || trajets.length === 0) ? '#999' : 'white',
-                border: (dejaPropose || trajets.length === 0) ? '1px solid #ccc' : 'none',
-                borderRadius:'6px', cursor: (dejaPropose || trajets.length === 0) ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
+            <button onClick={proposerAffectations} disabled={loading || aucunRestant}
+              style={{ padding:'8px 16px', background: aucunRestant ? '#e0e0e0' : '#2E75B6',
+                color: aucunRestant ? '#999' : 'white',
+                border: aucunRestant ? '1px solid #ccc' : 'none',
+                borderRadius:'6px', cursor: aucunRestant ? 'not-allowed' : 'pointer', fontWeight:'500' }}>
               {loading ? '...' : 'Proposer affectations'}
             </button>
             <button onClick={reinitialiserAffectations} disabled={loading || !dejaPropose}
