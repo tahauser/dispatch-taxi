@@ -105,6 +105,22 @@ router.patch('/:id/actif', authMiddleware, requireRole('dispatch','admin'), asyn
   const { actif } = req.body;
   if (typeof actif !== 'boolean') return res.status(400).json({ message: 'actif (boolean) requis' });
   try {
+    if (actif === false) {
+      // Refuser si le chauffeur a des trajets actifs (aujourd'hui ou à venir)
+      const act = await pool.query(
+        `SELECT COUNT(*)::int AS nb, MIN(date_programme)::text AS premiere, MAX(date_programme)::text AS derniere
+         FROM affectations
+         WHERE chauffeur_id=$1 AND statut IN ('proposee','confirmee','envoyee')
+           AND date_programme >= (NOW() AT TIME ZONE 'America/Montreal')::date`,
+        [req.params.id]);
+      if (act.rows[0].nb > 0) {
+        const { nb, premiere, derniere } = act.rows[0];
+        return res.status(409).json({
+          message: `Impossible de désactiver : ${nb} trajet${nb > 1 ? 's' : ''} actif${nb > 1 ? 's' : ''} (du ${premiere} au ${derniere}). Réaffectez-les d'abord.`,
+          nb_trajets: nb, premiere, derniere
+        });
+      }
+    }
     const result = await pool.query(
       `UPDATE chauffeurs SET actif=$1, modifie_le=NOW() WHERE id=$2 AND role='chauffeur'
        RETURNING id, numero_chauffeur, nom, prenom, actif`,

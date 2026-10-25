@@ -191,11 +191,12 @@ export default function GestionChauffeurs() {
   }
 
   async function toggleActif(ch) {
+    if (ch.actif && !window.confirm(`Désactiver ${ch.prenom} ${ch.nom} ?\nIl ne pourra plus se connecter ni recevoir de trajets.`)) return;
     try {
       await api.patch(`/chauffeurs/${ch.id}/actif`, { actif: !ch.actif });
       affMsg(`Chauffeur ${ch.prenom} ${ch.nom} ${!ch.actif ? 'activé' : 'désactivé'}`);
       charger();
-    } catch { affMsg('Erreur activation', false); }
+    } catch (err) { affMsg(err.response?.data?.message || 'Erreur activation', false); }
   }
 
   async function resetMdp(ch) {
@@ -282,8 +283,9 @@ export default function GestionChauffeurs() {
                 Aucun chauffeur trouvé
               </td></tr>
             ) : chauffeurs.map((c, i) => (
-              <tr key={c.id} style={{ background: !c.actif ? '#fff8f8' : i%2===0 ? '#fafafa' : 'white',
-                borderBottom:'1px solid #eee', opacity: c.actif ? 1 : 0.7 }}>
+              <tr key={c.id} style={{ background: !c.actif ? '#ececec' : i%2===0 ? '#fafafa' : 'white',
+                borderBottom:'1px solid #eee', color: c.actif ? undefined : '#9a9a9a',
+                filter: c.actif ? 'none' : 'grayscale(1)', opacity: c.actif ? 1 : 0.75 }}>
                 <td style={{ padding:'10px 14px', fontWeight:'700', color:BLEU }}>
                   <span style={{ display:'inline-flex', alignItems:'center', gap:'8px' }}><Avatar ch={c} size={32} />{c.numero_chauffeur}</span>
                 </td>
@@ -303,11 +305,11 @@ export default function GestionChauffeurs() {
                 </td>
                 <td style={{ padding:'10px 14px' }}>
                   <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-                    <button onClick={() => ouvrir(c)}
+                    {c.actif && <button onClick={() => ouvrir(c)}
                       style={{ background:'#e3f2fd', color:'#1565c0', border:'none',
                         padding:'5px 10px', borderRadius:'4px', cursor:'pointer', fontSize:'12px' }}>
                       Modifier
-                    </button>
+                    </button>}
                     <button onClick={() => toggleActif(c)}
                       style={{ background: c.actif ? '#fce4ec' : '#e8f5e9',
                         color: c.actif ? '#c62828' : '#2e7d32',
@@ -315,16 +317,16 @@ export default function GestionChauffeurs() {
                         cursor:'pointer', fontSize:'12px' }}>
                       {c.actif ? 'Désactiver' : 'Activer'}
                     </button>
-                    <button onClick={() => resetMdp(c)}
+                    {c.actif && <button onClick={() => resetMdp(c)}
                       style={{ background:'#fff3e0', color:'#E65100', border:'none',
                         padding:'5px 10px', borderRadius:'4px', cursor:'pointer', fontSize:'12px' }}>
                       Réinit. mdp
-                    </button>
-                    <button onClick={() => { setCarteCh(c); setCarteDate(today); }}
+                    </button>}
+                    {c.actif && <button onClick={() => { setCarteCh(c); setCarteDate(today); }}
                       style={{ background:'#e8f5e9', color:'#2e7d32', border:'none',
                         padding:'5px 10px', borderRadius:'4px', cursor:'pointer', fontSize:'12px' }}>
                       🗺️ Voir trajets
-                    </button>
+                    </button>}
                   </div>
                 </td>
               </tr>
