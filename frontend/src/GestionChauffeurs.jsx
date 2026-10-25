@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import api from './api';
 import Avatar from './Avatar';
+import { redimensionner, CATEGORIES_PERMIS } from './imagePhoto';
 import CarteTrajetsChauffeur from './CarteTrajetsChauffeur';
 
 const BLEU = '#1F4E79';
@@ -16,7 +17,8 @@ const PROVINCES = [
 const VIDE = {
   numero_chauffeur: '', nom: '', prenom: '', email: '', telephone: '',
   type_vehicule: 'TAXI', adresse_domicile: '', code_postal: '', ville: '',
-  province: 'Québec', lat_domicile: '', lng_domicile: ''
+  province: 'Québec', lat_domicile: '', lng_domicile: '',
+  date_naissance: '', numero_permis: '', categories: [], photo: ''
 };
 
 export default function GestionChauffeurs() {
@@ -148,7 +150,11 @@ export default function GestionChauffeurs() {
         ville: chauffeur.ville || '',
         province: chauffeur.province || 'Québec',
         lat_domicile: chauffeur.lat_domicile || '',
-        lng_domicile: chauffeur.lng_domicile || ''
+        lng_domicile: chauffeur.lng_domicile || '',
+        date_naissance: chauffeur.date_naissance ? String(chauffeur.date_naissance).substring(0, 10) : '',
+        numero_permis: chauffeur.numero_permis || '',
+        categories: chauffeur.categories_permis ? chauffeur.categories_permis.split(',').map(x => x.trim()).filter(Boolean) : [],
+        photo: chauffeur.photo || ''
       });
     } else {
       setEditing(null);
@@ -165,11 +171,13 @@ export default function GestionChauffeurs() {
     setLoading(true);
     try {
       let res;
+      const { categories, ...reste } = forme;
+      const payload = { ...reste, categories_permis: categories.join(',') };
       if (editing) {
-        res = await api.put(`/chauffeurs/${editing}`, forme);
+        res = await api.put(`/chauffeurs/${editing}`, payload);
         affMsg(`✓ Chauffeur ${res.data.prenom} ${res.data.nom} mis à jour`);
       } else {
-        res = await api.post('/chauffeurs', forme);
+        res = await api.post('/chauffeurs', payload);
         setMdpTemp(res.data.mot_de_passe_temp || '');
         affMsg(`✓ Chauffeur créé — mot de passe temporaire affiché`);
       }
@@ -343,6 +351,23 @@ export default function GestionChauffeurs() {
                 style={{ background:'none', border:'none', fontSize:'22px', cursor:'pointer', color:'#888' }}>×</button>
             </div>
             <form onSubmit={sauvegarder}>
+              <div style={{ display:'flex', alignItems:'center', gap:'14px', marginBottom:'16px' }}>
+                <Avatar ch={{ ...forme, photo: forme.photo }} size={72} />
+                <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                  <label style={{ padding:'7px 14px', background:BLEU, color:'white', borderRadius:'6px', fontSize:'13px', fontWeight:600, cursor:'pointer', textAlign:'center' }}>
+                    📷 {forme.photo ? 'Changer la photo' : 'Ajouter une photo'}
+                    <input type="file" accept="image/*" style={{ display:'none' }}
+                      onChange={async e => {
+                        const file = e.target.files?.[0]; e.target.value = '';
+                        if (!file) return;
+                        try { const data = await redimensionner(file); setForme(f => ({ ...f, photo: data })); }
+                        catch { affMsg('Photo non valide', false); }
+                      }} />
+                  </label>
+                  {forme.photo && <button type="button" onClick={() => setForme(f => ({ ...f, photo: '' }))}
+                    style={{ background:'none', border:'none', color:'#c62828', cursor:'pointer', fontSize:'12px', textAlign:'left', padding:0 }}>Supprimer la photo</button>}
+                </div>
+              </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0 16px' }}>
                 {champ('numero_chauffeur', 'N° chauffeur', 'text', true)}
                 {champ('type_vehicule', 'Type véhicule', 'text', false)}
@@ -350,6 +375,24 @@ export default function GestionChauffeurs() {
                 {champ('nom', 'Nom', 'text', true)}
                 {champ('email', 'Email', 'email', true)}
                 {champ('telephone', 'Téléphone')}
+                {champ('date_naissance', 'Date de naissance', 'date')}
+                {champ('numero_permis', 'N° de permis de conduire')}
+              </div>
+              <div style={{ marginBottom:'14px' }}>
+                <label style={{ display:'block', marginBottom:'5px', fontWeight:'500', color:'#333', fontSize:'13px' }}>Catégories du permis</label>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                  {CATEGORIES_PERMIS.map(c => {
+                    const on = forme.categories.includes(c);
+                    return (
+                      <label key={c} style={{ display:'flex', alignItems:'center', gap:'4px', padding:'5px 9px',
+                        border:`1px solid ${on ? BLEU : '#ddd'}`, borderRadius:'6px', cursor:'pointer',
+                        background: on ? '#e3edf7' : 'white', fontSize:'13px' }}>
+                        <input type="checkbox" checked={on}
+                          onChange={() => setForme(f => ({ ...f, categories: on ? f.categories.filter(x => x !== c) : [...f.categories, c] }))} />{c}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
               <div style={{ marginBottom:'14px' }}>
                 <label style={{ display:'block', marginBottom:'5px', fontWeight:'500', color:'#333', fontSize:'13px' }}>Type véhicule</label>

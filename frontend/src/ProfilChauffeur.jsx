@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from './api';
 import Avatar from './Avatar';
+import { redimensionner, CATEGORIES_PERMIS as CATEGORIES } from './imagePhoto';
 
 const BLEU = '#1F4E79';
 const input = { width:'100%', padding:'10px 12px', border:'1px solid #ddd', borderRadius:'6px', fontSize:'14px', boxSizing:'border-box' };
 const label = { display:'block', marginBottom:'6px', color:'#333', fontWeight:500, fontSize:'13px' };
-const CATEGORIES = ['4A', '4B', '4C', '5', '6A', '6B', '6C', '6D', '6E', '8'];
 
 function Msg({ m }) {
   if (!m) return null;
@@ -51,21 +51,6 @@ export default function ProfilChauffeur({ user }) {
     } catch (err) {
       setMsg({ type:'err', text: err.response?.data?.message || 'Erreur' });
     } finally { setSaving(false); }
-  }
-
-  function redimensionner(file) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const T = 256, ratio = Math.min(T / img.width, T / img.height, 1);
-        const c = document.createElement('canvas');
-        c.width = Math.round(img.width * ratio); c.height = Math.round(img.height * ratio);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL('image/jpeg', 0.8));
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
   }
 
   async function choisirPhoto(e) {

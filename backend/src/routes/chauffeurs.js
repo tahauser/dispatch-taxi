@@ -12,7 +12,7 @@ router.get('/', authMiddleware, requireRole('dispatch','admin'), async (req, res
     const result = await pool.query(
       `SELECT id, numero_chauffeur, nom, prenom, email, telephone,
               type_vehicule, actif, adresse_domicile, lat_domicile, lng_domicile, role,
-              date_naissance, numero_permis, categories_permis, photo
+              date_naissance::text AS date_naissance, numero_permis, categories_permis, photo
        FROM chauffeurs
        WHERE role = 'chauffeur' ${filtre}
        ORDER BY numero_chauffeur`
@@ -24,7 +24,10 @@ router.get('/', authMiddleware, requireRole('dispatch','admin'), async (req, res
 // POST /api/chauffeurs — créer un chauffeur
 router.post('/', authMiddleware, requireRole('dispatch','admin'), async (req, res) => {
   const { numero_chauffeur, nom, prenom, email, telephone,
-          type_vehicule, adresse_domicile, lat_domicile, lng_domicile } = req.body;
+          type_vehicule, adresse_domicile, lat_domicile, lng_domicile,
+          date_naissance, numero_permis, categories_permis, photo } = req.body;
+  if (photo && (typeof photo !== 'string' || !photo.startsWith('data:image/jpeg;base64,') || photo.length > 90000))
+    return res.status(400).json({ message: 'Photo invalide ou trop lourde' });
   if (!numero_chauffeur || !nom || !prenom || !email)
     return res.status(400).json({ message: 'numero_chauffeur, nom, prenom, email requis' });
   try {
@@ -33,12 +36,14 @@ router.post('/', authMiddleware, requireRole('dispatch','admin'), async (req, re
     const result = await pool.query(
       `INSERT INTO chauffeurs
          (numero_chauffeur, nom, prenom, email, telephone, type_vehicule,
-          adresse_domicile, lat_domicile, lng_domicile, mot_de_passe_hash, role, actif)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'chauffeur',TRUE)
+          adresse_domicile, lat_domicile, lng_domicile, mot_de_passe_hash, role, actif,
+          date_naissance, numero_permis, categories_permis, photo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'chauffeur',TRUE,$11,$12,$13,$14)
        RETURNING id, numero_chauffeur, nom, prenom, email, telephone, type_vehicule,
                  actif, adresse_domicile, lat_domicile, lng_domicile`,
       [numero_chauffeur, nom, prenom, email, telephone || null,
-       type_vehicule || 'TAXI', adresse_domicile || '', lat_domicile || null, lng_domicile || null, hash]
+       type_vehicule || 'TAXI', adresse_domicile || '', lat_domicile || null, lng_domicile || null, hash,
+       date_naissance || null, numero_permis || null, categories_permis || null, photo || null]
     );
     res.status(201).json({ ...result.rows[0], mot_de_passe_temp: mdp_temp });
   } catch (err) {
@@ -54,6 +59,11 @@ router.post('/', authMiddleware, requireRole('dispatch','admin'), async (req, re
 // PUT /api/chauffeurs/:id — modifier un chauffeur
 router.put('/:id', authMiddleware, requireRole('dispatch','admin'), async (req, res) => {
   const { nom, prenom, email, telephone, type_vehicule, adresse_domicile, lat_domicile, lng_domicile } = req.body;
+  const b = req.body;
+  const has = k => Object.prototype.hasOwnProperty.call(b, k);
+  const vide = v => (v === '' || v === undefined ? null : v);
+  if (has('photo') && b.photo && (typeof b.photo !== 'string' || !b.photo.startsWith('data:image/jpeg;base64,') || b.photo.length > 90000))
+    return res.status(400).json({ message: 'Photo invalide ou trop lourde' });
   try {
     const result = await pool.query(
       `UPDATE chauffeurs SET
@@ -65,17 +75,27 @@ router.put('/:id', authMiddleware, requireRole('dispatch','admin'), async (req, 
          adresse_domicile = COALESCE($6, adresse_domicile),
          lat_domicile   = COALESCE($7, lat_domicile),
          lng_domicile   = COALESCE($8, lng_domicile),
+         date_naissance    = CASE WHEN $10 THEN $11::date ELSE date_naissance END,
+         numero_permis     = CASE WHEN $12 THEN $13 ELSE numero_permis END,
+         categories_permis = CASE WHEN $14 THEN $15 ELSE categories_permis END,
+         photo             = CASE WHEN $16 THEN $17 ELSE photo END,
          modifie_le     = NOW()
        WHERE id = $9 AND role = 'chauffeur'
        RETURNING id, numero_chauffeur, nom, prenom, email, telephone, type_vehicule,
-                 actif, adresse_domicile, lat_domicile, lng_domicile`,
+                 actif, adresse_domicile, lat_domicile, lng_domicile,
+                 date_naissance::text AS date_naissance, numero_permis, categories_permis, photo`,
       [nom||null, prenom||null, email||null, telephone||null, type_vehicule||null,
-       adresse_domicile||null, lat_domicile||null, lng_domicile||null, req.params.id]
+       adresse_domicile||null, lat_domicile||null, lng_domicile||null, req.params.id,
+       has('date_naissance'), vide(b.date_naissance),
+       has('numero_permis'), vide(b.numero_permis),
+       has('categories_permis'), vide(b.categories_permis),
+       has('photo'), vide(b.photo)]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Chauffeur non trouvé' });
     res.json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ message: 'Email déjà utilisé' });
+    console.error('Erreur PUT chauffeur:', err.message);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });
